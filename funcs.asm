@@ -7,6 +7,26 @@ extern  printf
 
 ;;; 64-bit ABI integer parameters: rdi, rsi, rdx, rcx, r8, r9
 
+;;; Macro to push multiple registers
+%macro  mpush 1-*
+
+  %rep  %0
+        push    %1
+  %rotate 1
+  %endrep
+
+%endmacro
+
+;;; Macro to pop multiple registers in reverse order
+%macro  mpop 1-*
+
+  %rep %0
+  %rotate -1
+        pop     %1
+  %endrep
+
+%endmacro
+
 section .rodata
 printstr_fmt0:  db "print: %s", 10, 0
 printstr_fmt1:  db "print: %lld", 10, 0
@@ -16,19 +36,27 @@ printstr_fmt1:  db "print: %lld", 10, 0
 section .rodata
 %%msg:  db  %1, 0
 section .text
+        mpush   rdi rsi rdx rcx rax
+
         mov rdi, printstr_fmt0  ; format
         mov rsi, %%msg          ; string pointer for %s
         mov rax, 0              ; printf is varargs, so EAX counts # of non-integer arguments being passed
         call printf
+
+        mpop    rdi rsi rdx rcx rax
 %endmacro
 
 ;;; Define macro to printf (long long) integers from registers or more
 %macro printint 1
 section .text
-        mov rsi, %1             ; string pointer for %s
-        mov rdi, printstr_fmt1  ; format
-        mov rax, 0              ; printf is varargs, so EAX counts # of non-integer arguments being passed
-        call printf
+        mpush   rdi rsi rdx rcx rax
+
+        mov     rsi, %1             ; string pointer for %s
+        mov     rdi, printstr_fmt1  ; format
+        mov     rax, 0              ; printf is varargs, so EAX counts # of non-integer arguments being passed
+        call    printf
+
+        mpop    rdi rsi rdx rcx rax
 %endmacro
 
 section .text
@@ -366,7 +394,7 @@ funcSeqWrite64IndexUnrollLoop:
         mov     [rdi+rcx+15*8], rax
 
         add     rcx, 16*8
-        
+
         cmp     rcx, rsi        ; compare loop iterator
         jb      .loopsize
 
@@ -568,6 +596,66 @@ funcSkipRead64IndexSimpleLoop:
 
         cmp     rcx, rsi        ; compare loop iterator
         jb      .loopsize
+
+        dec     rdx
+        jnz     .looprepeat
+
+        ret
+
+;;; --------------------------------------------------------------------------------------------------
+
+;;; Follow 64-bit permutation in a simple loop
+;;; Called with rdi = memarea (permutation start), rsi = dummy, rdx = repeats
+global  funcPermRead64SimpleLoop
+funcPermRead64SimpleLoop:
+
+        mov     rcx, rdi        ; reset to permutation start
+
+.looprepeat:
+        ;; dont need to reset rcx = rdi
+
+.permloop:
+        mov     rcx, [rcx]      ; read next pointer
+
+        cmp     rcx, rdi
+        jne     .permloop        ; loop until start pointer is reached
+
+        dec     rdx
+        jnz     .looprepeat
+
+        ret
+
+;;; Follow 64-bit permutation in an unrolled loop
+;;; Called with rdi = memarea (permutation start), rsi = dummy, rdx = repeats
+global  funcPermRead64UnrollLoop
+funcPermRead64UnrollLoop:
+
+        mov     rcx, rdi        ; reset to permutation start
+
+.looprepeat:
+        ;; dont need to reset rcx = rdi
+
+.permloop:
+        mov     rcx, [rcx]      ; read next pointer
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+        mov     rcx, [rcx]
+
+        cmp     rcx, rdi
+        jne     .permloop        ; loop until start pointer is reached
 
         dec     rdx
         jnz     .looprepeat

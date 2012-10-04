@@ -9,27 +9,29 @@
 
 extern "C" {
 
-void  funcFill(void* memarea, size_t size);
+void funcFill(void* memarea, size_t size);
 
-void  funcSeqWrite64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void  funcSeqWrite64PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
-void  funcSeqRead64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void  funcSeqRead64PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
-void  funcSeqWrite128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void  funcSeqWrite128PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
-void  funcSeqRead128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void  funcSeqRead128PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
-void  funcSeqWrite64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
-void  funcSeqWrite64IndexUnrollLoop(void* memarea, size_t size, size_t repeats);
-void  funcSeqRead64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
-void  funcSeqRead64IndexUnrollLoop(void* memarea, size_t size, size_t repeats);
-void  funcSkipWrite64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void  funcSkipRead64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void  funcSkipWrite128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void  funcSkipRead128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void  funcSkipWrite64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
-void  funcSkipRead64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqWrite64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqWrite64PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqRead64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqRead64PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqWrite128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqWrite128PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqRead128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqRead128PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqWrite64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqWrite64IndexUnrollLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqRead64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSeqRead64IndexUnrollLoop(void* memarea, size_t size, size_t repeats);
+void funcSkipWrite64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSkipRead64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSkipWrite128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSkipRead128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSkipWrite64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
+void funcSkipRead64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
 
+void funcPermRead64SimpleLoop(void* memarea, size_t dummy, size_t repeats);
+void funcPermRead64UnrollLoop(void* memarea, size_t dummy, size_t repeats);
 }
 
 void testfunc_nonthreaded( void (*func)(void* memarea, size_t size, size_t repeats), const char* funcname, int datasize, int skiplen )
@@ -82,16 +84,18 @@ public:
     }
 };
 
-void cyclic_ptr_permutation(void** memarea, size_t size)
+void make_cyclic_pointer_permutation(void** memarea, size_t size)
 {
+    (std::cout << "Make permutation: filling").flush();
+
     for (size_t i = 0; i < size; ++i)
     {
         memarea[i] = &memarea[i];       // fill area with pointers to self-address
     }
 
-    std::cout << "Filled\n";
+    (std::cout << " permuting").flush();
 
-    LCGRandom srnd(233349568);
+    LCGRandom srnd((size_t)memarea + 23334956468);
 
     for (size_t n = size; n > 1; --n)
     {
@@ -99,7 +103,7 @@ void cyclic_ptr_permutation(void** memarea, size_t size)
         std::swap( memarea[i], memarea[n-1] );
     }
 
-    std::cout << "permuted\n";
+    (std::cout << " testing").flush();
 
     {
         void* ptr = memarea[0];
@@ -110,8 +114,13 @@ void cyclic_ptr_permutation(void** memarea, size_t size)
             ptr = *(void**)ptr;
             ++steps;
         }
-        std::cout << "cycle = " << steps << "\n";
+        std::cout << ", cycle = " << steps << "\n";
     }
+}
+
+void make_cyclic_permutation(void* memarea, size_t bytesize)
+{
+    return make_cyclic_pointer_permutation((void**)memarea, bytesize / sizeof(void*));
 }
 
 static const size_t testsize_list[] = {
@@ -160,7 +169,8 @@ static const size_t testsize_list[] = {
     0
 };
 
-void testfunc( void (*func)(void* memarea, size_t size, size_t repeats), const char* funcname, int access_size, int skiplen )
+void testfunc( void (*func)(void* memarea, size_t size, size_t repeats), const char* funcname,
+               int access_size, int skiplen, bool use_permutation )
 {
     const size_t memsize = 2*1024*1024*1024LLU;
     const int factor = 2;               // repeat factor
@@ -168,8 +178,8 @@ void testfunc( void (*func)(void* memarea, size_t size, size_t repeats), const c
     int maxprocs = omp_get_num_procs();
 
     char* memarea = (char*)malloc(memsize + maxprocs * 64);
-    funcFill(memarea, memsize);
-    //cyclic_ptr_permutation((void**)memarea, memsize / sizeof(void*));
+
+    if (!use_permutation) funcFill(memarea, memsize);
 
     for (int nprocs = 1; nprocs <= maxprocs+2; ++nprocs)
     {
@@ -193,6 +203,10 @@ void testfunc( void (*func)(void* memarea, size_t size, size_t repeats), const c
 */
 
                 size_t thrsize2 = std::max<size_t>(thrsize, 64*1024*1024);
+
+                // create cyclic permutation for each processor
+                if (use_permutation)
+                    make_cyclic_permutation(memarea + omp_get_thread_num() * thrsize2, thrsize);
 
 #pragma omp barrier
                 double ts1 = omp_get_wtime();
@@ -223,33 +237,37 @@ void testfunc( void (*func)(void* memarea, size_t size, size_t repeats), const c
     free(memarea);
 }
 
-#define TESTFUNC(x,bits,skip)        testfunc(x, #x, bits, skip)
+#define TESTFUNC(x,bits,skip)           testfunc(x, #x, bits, skip, false)
+#define TESTFUNC_PERM(x,bits,skip)      testfunc(x, #x, bits, skip, true)
 
 int main()
 {
     unlink("stats.txt");
 
-    TESTFUNC( funcSeqWrite64PtrSimpleLoop, 8, 8);
-    TESTFUNC( funcSeqWrite64PtrUnrollLoop, 8, 8);
-    TESTFUNC( funcSeqRead64PtrSimpleLoop, 8, 8);
-    TESTFUNC( funcSeqRead64PtrUnrollLoop, 8, 8);
+    TESTFUNC( funcSeqWrite64PtrSimpleLoop, 8, 8 );
+    TESTFUNC( funcSeqWrite64PtrUnrollLoop, 8, 8 );
+    TESTFUNC( funcSeqRead64PtrSimpleLoop, 8, 8 );
+    TESTFUNC( funcSeqRead64PtrUnrollLoop, 8, 8 );
 
-    TESTFUNC( funcSeqWrite128PtrSimpleLoop, 16, 16);
-    TESTFUNC( funcSeqWrite128PtrUnrollLoop, 16, 16);
-    TESTFUNC( funcSeqRead128PtrSimpleLoop, 16, 16);
-    TESTFUNC( funcSeqRead128PtrUnrollLoop, 16, 16);
+    TESTFUNC( funcSeqWrite128PtrSimpleLoop, 16, 16 );
+    TESTFUNC( funcSeqWrite128PtrUnrollLoop, 16, 16 );
+    TESTFUNC( funcSeqRead128PtrSimpleLoop, 16, 16 );
+    TESTFUNC( funcSeqRead128PtrUnrollLoop, 16, 16 );
 
-    TESTFUNC( funcSeqWrite64IndexSimpleLoop, 8, 8);
-    TESTFUNC( funcSeqWrite64IndexUnrollLoop, 8, 8);
-    TESTFUNC( funcSeqRead64IndexSimpleLoop, 8, 8);
-    TESTFUNC( funcSeqRead64IndexUnrollLoop, 8, 8);
+    TESTFUNC( funcSeqWrite64IndexSimpleLoop, 8, 8 );
+    TESTFUNC( funcSeqWrite64IndexUnrollLoop, 8, 8 );
+    TESTFUNC( funcSeqRead64IndexSimpleLoop, 8, 8 );
+    TESTFUNC( funcSeqRead64IndexUnrollLoop, 8, 8 );
 
-    TESTFUNC( funcSkipWrite64PtrSimpleLoop, 8, 64+8);
-    TESTFUNC( funcSkipRead64PtrSimpleLoop, 8, 64+8);
-    TESTFUNC( funcSkipWrite128PtrSimpleLoop, 16, 64+16);
-    TESTFUNC( funcSkipRead128PtrSimpleLoop, 8, 64+16);
-    TESTFUNC( funcSkipWrite64IndexSimpleLoop, 8, 64+8);
-    TESTFUNC( funcSkipRead64IndexSimpleLoop, 8, 64+8);
+    TESTFUNC( funcSkipWrite64PtrSimpleLoop, 8, 64+8 );
+    TESTFUNC( funcSkipRead64PtrSimpleLoop, 8, 64+8 );
+    TESTFUNC( funcSkipWrite128PtrSimpleLoop, 16, 64+16 );
+    TESTFUNC( funcSkipRead128PtrSimpleLoop, 8, 64+16 );
+    TESTFUNC( funcSkipWrite64IndexSimpleLoop, 8, 64+8 );
+    TESTFUNC( funcSkipRead64IndexSimpleLoop, 8, 64+8 );
+
+    TESTFUNC_PERM( funcPermRead64SimpleLoop, 8, 8 );
+    TESTFUNC_PERM( funcPermRead64UnrollLoop, 8, 8 );
 
     return 0;
 }
