@@ -1,0 +1,351 @@
+% -*- mode: latex; mode: flyspell; ispell-local-dictionary: "en_GB"; truncate-lines: t -*-
+
+\documentclass{mathsheet}
+
+\geometry{landscape}
+
+\usepackage{pgfplots}
+
+\pgfplotscreateplotcyclelist{color}{%
+  red, every mark/.append style={solid,fill=red!80!black}, mark=* \\%
+  blue, every mark/.append style={solid,fill=blue!80!black}, mark=square* \\%
+  green!70!black, every mark/.append style={solid,fill=green!80!black}, mark=diamond* \\%
+  orange, mark=x \\%
+  cyan, mark=triangle* \\%
+  brown!60!black, every mark/.append style={solid,fill=brown!80!black}, mark=otimes* \\%
+  purple!80!blue, every mark/.append style={solid,fill=purple}, mark=square* \\%
+  cyan!60!black, every mark/.append style={solid,fill=cyan!80!black}, mark=pentagon* \\%
+%
+  red, every mark/.append style={solid}, mark=o, dashed \\%
+  blue, every mark/.append style={solid}, mark=square, dashed \\%
+  green!70!black, every mark/.append style={solid}, mark=diamond, dashed \\%
+  orange, every mark/.append style={solid}, mark=x, dashed \\%
+  cyan, every mark/.append style={solid}, mark=triangle, dashed \\%
+  brown!60!black, every mark/.append style={solid}, mark=otimes, dashed \\%
+  purple!80!blue, every mark/.append style={solid}, mark=square, dashed \\%
+  cyan!60!black, every mark/.append style={solid}, mark=pentagon, dashed \\%
+}
+
+\pgfplotsset{
+  major grid style={thin,dotted,color=black!50},
+  minor grid style={thin,dotted,color=black!50},
+  every axis/.append style={
+    line width=0.5pt,
+    tick style={
+      line cap=round,
+      thin,
+      major tick length=4pt,
+      minor tick length=2pt,
+    },
+  },
+  cycle list name={color},
+  legend cell align=left,
+}
+
+\begin{document}
+\centering
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE nprocs=1 ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north west,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Access Time (Latency)},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Time per access [$\text{ns}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname) LOG(2,size) AS x, CAST(rate AS FLOAT) * 1e9 AS y, MULTIPLOT FROM "mybandwidth" WHERE nprocs=1 ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqWrite64PtrSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqWrite64PtrUnrollLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqRead64PtrSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqRead64PtrUnrollLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqWrite128PtrSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqWrite128PtrUnrollLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqRead128PtrSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqRead128PtrUnrollLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqWrite64IndexSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqWrite64IndexUnrollLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqRead64IndexSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSeqRead64IndexUnrollLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSkipWrite64PtrSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSkipRead64PtrSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSkipWrite128PtrSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSkipRead128PtrSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSkipWrite64IndexSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\begin{tikzpicture}[baseline=(current bounding box.center),trim axis left]
+  \begin{axis}[width=26cm,height=16.6cm,
+    legend pos=north east,legend style={font=\tiny,fill=none},
+    grid,
+    title={Memory Bandwidth},
+    xlabel={Input size $n$ [b]},
+    xticklabel={$2^{\pgfmathprintnumber{\tick}}$},
+    ylabel={Bytes per time [$\frac{\text{GiB}}{\text{s}}$]},ylabel near ticks,
+    ]
+
+    % SELECT MULTIPLOT(funcname,nprocs) LOG(2,size) AS x, CAST(bandwidth AS FLOAT) / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname ~ 'funcSkipRead64IndexSimpleLoop' ORDER BY MULTIPLOT,size
+
+  \end{axis}
+\end{tikzpicture}
+
+\end{document}
+
