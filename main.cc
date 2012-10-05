@@ -159,21 +159,27 @@ static const size_t testsize_list[] = {
     6 * 1024 * 1024,    	// 6 MiB = common L2 cache size
     7 * 1024 * 1024,    	// 7 MiB
     8 * 1024 * 1024,
+    9 * 1024 * 1024,
+    10 * 1024 * 1024,
+    12 * 1024 * 1024,
     16 * 1024 * 1024,
     32 * 1024 * 1024,
     64 * 1024 * 1024,
     128 * 1024 * 1024,
     256 * 1024 * 1024,
     512 * 1024 * 1024,
-    1024 * 1024 * 1024,         // 1 GiB
+    1 * 1024 * 1024 * 1024,     // 1 GiB
+    2 * 1024 * 1024 * 1024LLU,  // 2 GiB
+    4 * 1024 * 1024 * 1024LLU,  // 4 GiB
+    8 * 1024 * 1024 * 1024LLU,  // 8 GiB
     0
 };
 
 void testfunc( void (*func)(void* memarea, size_t size, size_t repeats), const char* funcname,
                int access_size, int skiplen, bool use_permutation )
 {
-    const size_t memsize = 2*1024*1024*1024LLU;
-    const int factor = 2;               // repeat factor
+    const size_t memsize = 8*1024*1024*1024LLU;
+    const int factor = 1;               // repeat factor
 
     int maxprocs = omp_get_num_procs();
 
