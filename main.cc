@@ -311,27 +311,28 @@ int main()
 #define TESTFUNC(x,bits,skip)           testfunc(memarea, memsize, x, #x, bits, skip, false)
 #define TESTFUNC_PERM(x,bits,skip)      testfunc(memarea, memsize, x, #x, bits, skip, true)
 
-    TESTFUNC( funcSeqWrite64PtrSimpleLoop, 8, 8 );
-    TESTFUNC( funcSeqWrite64PtrUnrollLoop, 8, 8 );
     TESTFUNC( funcSeqRead64PtrSimpleLoop, 8, 8 );
     TESTFUNC( funcSeqRead64PtrUnrollLoop, 8, 8 );
+    TESTFUNC( funcSeqWrite64PtrSimpleLoop, 8, 8 );
+    TESTFUNC( funcSeqWrite64PtrUnrollLoop, 8, 8 );
 
-    TESTFUNC( funcSeqWrite128PtrSimpleLoop, 16, 16 );
-    TESTFUNC( funcSeqWrite128PtrUnrollLoop, 16, 16 );
     TESTFUNC( funcSeqRead128PtrSimpleLoop, 16, 16 );
     TESTFUNC( funcSeqRead128PtrUnrollLoop, 16, 16 );
+    TESTFUNC( funcSeqWrite128PtrSimpleLoop, 16, 16 );
+    TESTFUNC( funcSeqWrite128PtrUnrollLoop, 16, 16 );
 
-    TESTFUNC( funcSeqWrite64IndexSimpleLoop, 8, 8 );
-    TESTFUNC( funcSeqWrite64IndexUnrollLoop, 8, 8 );
     TESTFUNC( funcSeqRead64IndexSimpleLoop, 8, 8 );
     TESTFUNC( funcSeqRead64IndexUnrollLoop, 8, 8 );
+    TESTFUNC( funcSeqWrite64IndexSimpleLoop, 8, 8 );
+    TESTFUNC( funcSeqWrite64IndexUnrollLoop, 8, 8 );
 
-    TESTFUNC( funcSkipWrite64PtrSimpleLoop, 8, 64+8 );
     TESTFUNC( funcSkipRead64PtrSimpleLoop, 8, 64+8 );
-    TESTFUNC( funcSkipWrite128PtrSimpleLoop, 16, 64+16 );
+    TESTFUNC( funcSkipWrite64PtrSimpleLoop, 8, 64+8 );
     TESTFUNC( funcSkipRead128PtrSimpleLoop, 8, 64+16 );
-    TESTFUNC( funcSkipWrite64IndexSimpleLoop, 8, 64+8 );
+    TESTFUNC( funcSkipWrite128PtrSimpleLoop, 16, 64+16 );
+
     TESTFUNC( funcSkipRead64IndexSimpleLoop, 8, 64+8 );
+    TESTFUNC( funcSkipWrite64IndexSimpleLoop, 8, 64+8 );
 
     TESTFUNC_PERM( funcPermRead64SimpleLoop, 8, 8 );
     TESTFUNC_PERM( funcPermRead64UnrollLoop, 8, 8 );
