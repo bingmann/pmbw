@@ -1,17 +1,19 @@
+CXX = g++
+CXXFLAGS = -g -O2 -W -Wall -fopenmp
 
-CXXFLAGS = -g -O3 -W -Wall -fopenmp
+NASM = nasm
+NASMFLAGS = -g -f elf64
 
-all:	test
+all:	pmbw
 
-test: funcs.o main.o
-	g++ $(CXXFLAGS) -o test $^
+pmbw: funcs.o main.o
+	$(CXX) $(CXXFLAGS) -o pmbw $^
 
 main.o: main.cc
-	g++ $(CXXFLAGS) -c -o $@ $^
+	$(CXX) $(CXXFLAGS) -c -o $@ $^
 
 funcs.o: funcs.asm
-	nasm -g -f elf64 funcs.asm
-
+	$(NASM) $(NASMFLAGS) funcs.asm
 
 clean:
-	rm *.o test
+	rm *.o pmbw
