@@ -143,7 +143,7 @@ funcSeqWrite64PtrUnrollLoop:
 
         ret
 
-;;; 64-bit writer in a simple loop
+;;; 64-bit reader in a simple loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
 global  funcSeqRead64PtrSimpleLoop
 funcSeqRead64PtrSimpleLoop:
@@ -165,7 +165,7 @@ funcSeqRead64PtrSimpleLoop:
 
         ret
 
-;;; 64-bit writer in an unrolled loop
+;;; 64-bit reader in an unrolled loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
 global  funcSeqRead64PtrUnrollLoop
 funcSeqRead64PtrUnrollLoop:
@@ -279,7 +279,7 @@ funcSeqWrite128PtrUnrollLoop:
 
         ret
 
-;;; 128-bit writer in a simple loop
+;;; 128-bit reader in a simple loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
 global  funcSeqRead128PtrSimpleLoop
 funcSeqRead128PtrSimpleLoop:
@@ -301,7 +301,7 @@ funcSeqRead128PtrSimpleLoop:
 
         ret
 
-;;; 128-bit writer in an unrolled loop
+;;; 128-bit reader in an unrolled loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
 global  funcSeqRead128PtrUnrollLoop
 funcSeqRead128PtrUnrollLoop:
@@ -403,7 +403,7 @@ funcSeqWrite64IndexUnrollLoop:
 
         ret
 
-;;; 64-bit writer in a simple loop
+;;; 64-bit reader in a simple loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
 global  funcSeqRead64IndexSimpleLoop
 funcSeqRead64IndexSimpleLoop:
@@ -423,7 +423,7 @@ funcSeqRead64IndexSimpleLoop:
 
         ret
 
-;;; 64-bit writer in an unrolled loop
+;;; 64-bit reader in an unrolled loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
 global  funcSeqRead64IndexUnrollLoop
 funcSeqRead64IndexUnrollLoop:
@@ -487,7 +487,7 @@ funcSkipWrite64PtrSimpleLoop:
 
         ret
 
-;;; 64-bit writer in a simple loop
+;;; 64-bit reader in a simple loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
 global  funcSkipRead64PtrSimpleLoop
 funcSkipRead64PtrSimpleLoop:
@@ -537,7 +537,7 @@ funcSkipWrite128PtrSimpleLoop:
 
         ret
 
-;;; 128-bit writer in a simple loop
+;;; 128-bit reader in a simple loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
 global  funcSkipRead128PtrSimpleLoop
 funcSkipRead128PtrSimpleLoop:
@@ -582,7 +582,7 @@ funcSkipWrite64IndexSimpleLoop:
 
         ret
 
-;;; 64-bit writer in a simple loop
+;;; 64-bit reader in a simple loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
 global  funcSkipRead64IndexSimpleLoop
 funcSkipRead64IndexSimpleLoop:

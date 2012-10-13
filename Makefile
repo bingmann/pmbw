@@ -5,6 +5,8 @@ NASM = nasm
 NASMFLAGS = -g -f elf64
 
 all:	pmbw
+	@echo "To pin threads, run:"
+	@echo "export OMP_PROC_BIND=true"
 
 pmbw: funcs.o main.o
 	$(CXX) $(CXXFLAGS) -o pmbw $^

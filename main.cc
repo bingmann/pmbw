@@ -68,7 +68,7 @@ void make_cyclic_permutation(void* memarea, size_t bytesize)
 
     (std::cout << " permuting").flush();
 
-    LCGRandom srnd((size_t)ptrarray + 23334956468);
+    LCGRandom srnd((size_t)ptrarray + 233349568);
 
     for (size_t n = size; n > 1; --n)
     {
@@ -295,7 +295,7 @@ int main()
     size_t memsize = round_up_power2(physical_mem) / 2;
 
     // due to roundup in loop to next cache-line size, add one extra cache-line per processor
-    memsize += omp_get_num_procs() * 64;
+    memsize += omp_get_num_procs() * 128;
 
     std::cerr << "Detected " << physical_mem / 1024/1024 << " MiB physical RAM. Allocating " << memsize / 1024/1024 << " MiB for testing." << std::endl;
 
