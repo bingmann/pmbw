@@ -10,6 +10,12 @@
 
 #include <omp.h>
 
+// *** Global Settings
+
+const char* g_funcfilter;
+
+// *** Prototypes for external assembler functions
+
 extern "C" {
 
 void funcFill(void* memarea, size_t size);
@@ -162,6 +168,12 @@ void testfunc( char* memarea, const size_t memsize,
                void (*func)(void* memarea, size_t size, size_t repeats), const char* funcname,
                int access_size, int skiplen, bool use_permutation )
 {
+    if (g_funcfilter && strstr(funcname,g_funcfilter) == NULL)
+    {
+        std::cerr << "Skipping " << funcname << " tests" << std::endl;
+        return;
+    }
+
     const int maxprocs = omp_get_num_procs();
 
     for (int nprocs = 1; nprocs <= maxprocs+2; ++nprocs)
@@ -285,8 +297,25 @@ static inline size_t round_up_power2(size_t v)
     return v + (v == 0);
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+    // *** parse command line options
+
+    int opt;
+
+    while ( (opt = getopt(argc, argv, "f:")) != -1 )
+    {
+        switch (opt) {
+        case 'f':
+            g_funcfilter = optarg;
+            std::cerr << "Running only functions containing '" << g_funcfilter << "'" << std::endl;
+            break;
+        default: /* '?' */
+            std::cerr << "Usage: " << argv[0] << " [-f funcfilter]" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+
     // *** allocate memory for tests
 
     size_t physical_mem = sysconf(_SC_PHYS_PAGES) * (size_t)sysconf(_SC_PAGESIZE);
@@ -297,7 +326,8 @@ int main()
     // due to roundup in loop to next cache-line size, add one extra cache-line per processor
     memsize += omp_get_num_procs() * 128;
 
-    std::cerr << "Detected " << physical_mem / 1024/1024 << " MiB physical RAM. Allocating " << memsize / 1024/1024 << " MiB for testing." << std::endl;
+    std::cout << "Detected " << physical_mem / 1024/1024 << " MiB physical RAM and " << omp_get_num_procs() << " CPUs. " << std::endl
+              << "Allocating " << memsize / 1024/1024 << " MiB for testing." << std::endl;
 
     // allocate memory area
     char* memarea = (char*)malloc(memsize);

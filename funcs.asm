@@ -20,7 +20,7 @@ extern  printf
 ;;; Macro to pop multiple registers in reverse order
 %macro  mpop 1-*
 
-  %rep %0
+  %rep  %0
   %rotate -1
         pop     %1
   %endrep
@@ -61,7 +61,7 @@ section .text
 
 section .text
 
-;;; --------------------------------------------------------------------------------------------------
+;;; ---------------------------------------------------------------------------
 
 ;;; 64-bit writer to fill a memory area
 ;;; Called with rdi = memarea, rsi = size
@@ -78,7 +78,7 @@ funcFill:
 
         ret
 
-;;; --------------------------------------------------------------------------------------------------
+;;; ---------------------------------------------------------------------------
 
 ;;; 64-bit writer in a simple loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
@@ -204,7 +204,7 @@ funcSeqRead64PtrUnrollLoop:
 
         ret
 
-;;; --------------------------------------------------------------------------------------------------
+;;; ---------------------------------------------------------------------------
 
 ;;; 128-bit writer in a simple loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
@@ -340,7 +340,7 @@ funcSeqRead128PtrUnrollLoop:
 
         ret
 
-;;; --------------------------------------------------------------------------------------------------
+;;; ---------------------------------------------------------------------------
 
 ;;; 64-bit writer in a simple loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
@@ -460,9 +460,9 @@ funcSeqRead64IndexUnrollLoop:
 
         ret
 
-;;; --------------------------------------------------------------------------------------------------
+;;; ---------------------------------------------------------------------------
 
-skiplen equ     64
+skiplen equ     64              ; length of skips
 
 ;;; 64-bit writer in a simple loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
@@ -559,7 +559,6 @@ funcSkipRead128PtrSimpleLoop:
 
         ret
 
-
 ;;; 64-bit writer in a simple loop
 ;;; Called with rdi = memarea, rsi = size, rdx = repeats
 global  funcSkipWrite64IndexSimpleLoop
@@ -602,7 +601,7 @@ funcSkipRead64IndexSimpleLoop:
 
         ret
 
-;;; --------------------------------------------------------------------------------------------------
+;;; ---------------------------------------------------------------------------
 
 ;;; Follow 64-bit permutation in a simple loop
 ;;; Called with rdi = memarea (permutation start), rsi = dummy, rdx = repeats
