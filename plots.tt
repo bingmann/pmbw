@@ -66,10 +66,12 @@ set title hostname.' - Memory Bandwidth - [% func %]'
 set ylabel 'Bandwidth [GiB/s]'
 # SELECT MULTIPLOT(funcname,nprocs) LOG(2,testsize) AS x, bandwidth / 1024/1024/1024 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname='[% func %]' ORDER BY MULTIPLOT,testsize
 
+set key top left
 set title hostname.' - Memory Latency - [% func %]'
 set ylabel 'Access Time [ns]'
 # SELECT MULTIPLOT(funcname,nprocs) LOG(2,testsize) AS x, rate * 1e9 AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname = '[% func %]' ORDER BY MULTIPLOT,testsize
 
+set key top right
 set title hostname.' - Speedup of Memory Bandwidth - [% func %]'
 set ylabel 'Bandwidth Speedup [1]'
 # SELECT MULTIPLOT(funcname,nprocs) LOG(2,testsize) AS x, bandwidth / (SELECT bandwidth FROM "mybandwidth" b2 WHERE b2.nprocs=1 AND b2.funcname=mybandwidth.funcname AND b2.areasize = mybandwidth.areasize) AS y, MULTIPLOT FROM "mybandwidth" WHERE funcname='[% func %]' ORDER BY MULTIPLOT,testsize
