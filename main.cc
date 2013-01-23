@@ -152,7 +152,6 @@ static const size_t areasize_list[] = {
     2 * 1024 * 1024 * 1024LLU,
     4 * 1024 * 1024 * 1024LLU,
     8 * 1024 * 1024 * 1024LLU,
-/*
     16 * 1024 * 1024 * 1024LLU,
     32 * 1024 * 1024 * 1024LLU,
     64 * 1024 * 1024 * 1024LLU,
@@ -160,7 +159,6 @@ static const size_t areasize_list[] = {
     256 * 1024 * 1024 * 1024LLU,
     512 * 1024 * 1024 * 1024LLU,
     1024 * 1024 * 1024 * 1024LLU,       // 1 TiB
-*/
     0   // list termination
 };
 
