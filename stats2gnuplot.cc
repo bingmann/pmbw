@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <vector>
+#include <set>
 #include <map>
 
 #include <errno.h>
@@ -18,6 +19,7 @@
 bool gopt_warnings = false;
 
 #define ERR(x)  do { std::cerr << x << std::endl; } while(0)
+#define ERRX(x)  do { std::cerr << x; } while(0)
 #define WARN(x) do { if (gopt_warnings) { std::cerr << x << std::endl; } } while(0)
 
 // *** List of Function Name Processed (and Their Order)
@@ -247,15 +249,24 @@ void process_file(const char* path)
 /// check for multiple hosts
 bool check_multiple_hosts()
 {
+    std::set<std::string> hostnames;
     g_hostname = g_results[0].host;
 
     for (size_t i = 0; i < g_results.size(); ++i)
     {
-        if (g_results[i].host != g_hostname) {
-            ERR("Multiple different hostnames found in results: "
-                << g_hostname << " and " << g_results[i].host);
-            return false;
+        hostnames.insert( g_results[i].host );
+    }
+
+    if (hostnames.size() > 1)
+    {
+        ERRX("Multiple different hostnames found in results:");
+        for(std::set<std::string>::const_iterator hi = hostnames.begin();
+            hi != hostnames.end(); ++hi)
+        {
+            ERRX(" " << *hi);
         }
+        ERR("");
+        return false;
     }
 
     return true;
@@ -546,7 +557,7 @@ void output_gnuplot(std::ostream& os)
     P("");
     P("set grid xtics ytics");
     P("set xtics 1");
-    P("set xlabel 'Input Size log_2 [b]'");
+    P("set xlabel 'Input Size log_2 [B]'");
 
     plot_sequential(os);
     plot_parallel(os);
@@ -555,7 +566,6 @@ void output_gnuplot(std::ostream& os)
 /// main: read stdin or from all files on the command line
 int main(int argc, char* argv[])
 {
-    bool opt_allow_multiple_hostnames = false;
     std::string opt_hostname_override;
 
     if (argc == 1) {
@@ -566,12 +576,12 @@ int main(int argc, char* argv[])
         // *** parse command line options
         int opt;
 
-        while ( (opt = getopt(argc, argv, "mvh:")) != -1 )
+        while ( (opt = getopt(argc, argv, "vh:")) != -1 )
         {
             switch (opt) {
-            case 'm':
-                opt_allow_multiple_hostnames = true;
-                ERR("Allowing multiple hostnames in results.");
+            case 'h':
+                opt_hostname_override = optarg;
+                ERR("Setting hostname override to '" << opt_hostname_override << "'");
                 break;
 
             case 'v':
@@ -579,13 +589,8 @@ int main(int argc, char* argv[])
                 ERR("Outputting verbose warnings when processing plots.");
                 break;
 
-            case 'h':
-                opt_hostname_override = optarg;
-                ERR("Setting hostname override to '" << opt_hostname_override << "'");
-                break;
-
             default: /* '?' */
-                ERR("Usage: " << argv[0] << " [-v] [-m] [-h hostname] [files...]");
+                ERR("Usage: " << argv[0] << " [-v] [-h hostname] [files...]");
                 exit(EXIT_FAILURE);
             }
         }
@@ -605,7 +610,10 @@ int main(int argc, char* argv[])
 
     if (!check_multiple_hosts())
     {
-        if (!opt_allow_multiple_hostnames) return 0;
+        if (!opt_hostname_override.size()) {
+            ERR("Use -h <hostname> to override the hostnames if this is intentional.");
+            return 0;
+        }
     }
 
     if (opt_hostname_override.size())
