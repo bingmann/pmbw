@@ -13,6 +13,12 @@
 // *** Global Settings
 
 const char* g_funcfilter;
+size_t g_sizelimit = 4*1024*1024*1024LLU;  // default size limit: 4 GiB
+int g_nprocs_min = 0;                      // lower limit to number of threads
+int g_nprocs_max = 0;                      // upper limit to number of threads
+
+#define ERR(x)  do { std::cerr << x << std::endl; } while(0)
+#define ERRX(x)  do { std::cerr << x; } while(0)
 
 // *** Prototypes for external assembler functions
 
@@ -44,6 +50,25 @@ void funcPermRead64SimpleLoop(void* memarea, size_t dummy, size_t repeats);
 void funcPermRead64UnrollLoop(void* memarea, size_t dummy, size_t repeats);
 }
 
+/// parse a number as size_t with error detection
+static inline bool
+parse_sizet(const char* value, size_t& out)
+{
+    char* endp;
+    out = strtoull(value, &endp, 10);
+    return (endp && *endp == 0);
+}
+
+/// parse a number as int with error detection
+static inline bool
+parse_int(const char* value, int& out)
+{
+    char* endp;
+    out = strtoul(value, &endp, 10);
+    return (endp && *endp == 0);
+}
+
+/// Simple linear congruential random generator
 class LCGRandom
 {
 private:
@@ -60,6 +85,7 @@ public:
     }
 };
 
+/// Create a one-cycle permutation of pointers in the memory area
 void make_cyclic_permutation(void* memarea, size_t bytesize)
 {
     void** ptrarray = (void**)memarea;
@@ -99,6 +125,7 @@ void make_cyclic_permutation(void* memarea, size_t bytesize)
     }
 }
 
+/// List of array sizes to test
 static const size_t areasize_list[] = {
     1 * 1024,                   // 1 KiB
     2 * 1024,
@@ -166,9 +193,8 @@ void testfunc( char* memarea, const size_t memsize,
                void (*func)(void* memarea, size_t size, size_t repeats), const char* funcname,
                int access_size, int skiplen, bool use_permutation )
 {
-    if (g_funcfilter && strstr(funcname,g_funcfilter) == NULL)
-    {
-        std::cerr << "Skipping " << funcname << " tests" << std::endl;
+    if (g_funcfilter && strstr(funcname,g_funcfilter) == NULL) {
+        ERR("Skipping " << funcname << " tests");
         return;
     }
 
@@ -176,13 +202,18 @@ void testfunc( char* memarea, const size_t memsize,
 
     for (int nprocs = 1; nprocs <= maxprocs+2; ++nprocs)
     {
+        if ( nprocs < g_nprocs_min || (g_nprocs_max && nprocs > g_nprocs_max) ) {
+            ERR("Skipping " << funcname << " tests with " << nprocs << " threads.");
+            continue;
+        }
+
         size_t factor = 1024*1024*1024;             // repeat factor, approximate B/s bandwidth
 
 #pragma omp parallel num_threads(nprocs)
         {
-            for (const size_t* areasize_ = areasize_list; *areasize_; ++areasize_)
+            for (const size_t* p_areasize = areasize_list; *p_areasize; ++p_areasize)
             {
-                const size_t& areasize = *areasize_;
+                const size_t& areasize = *p_areasize;
 
                 size_t thrsize = areasize / nprocs;             // divide area by processor number
 
@@ -203,17 +234,21 @@ void testfunc( char* memarea, const size_t memsize,
                 size_t testvol = testsize * repeats * access_size / skiplen;        // volume in bytes tested
                 size_t testaccess = testsize * repeats / skiplen;                   // number of accesses in test
 
+                if (areasize > g_sizelimit && g_sizelimit != 0) {
+                    ERR("Skipping " << funcname << " test with " << areasize << " array size due to -s <size limit>.");
+                    continue;
+                }
+
 #pragma omp single
-                std::cerr << "Running"
-                          << " nprocs=" << nprocs
-                          << " factor=" << factor
-                          << " areasize=" << areasize
-                          << " thrsize=" << thrsize
-                          << " testsize=" << testsize
-                          << " repeats=" << repeats
-                          << " testvol=" << testvol
-                          << " testaccess=" << testaccess
-                          << std::endl;
+                ERR("Running"
+                    << " nprocs=" << nprocs
+                    << " factor=" << factor
+                    << " areasize=" << areasize
+                    << " thrsize=" << thrsize
+                    << " testsize=" << testsize
+                    << " repeats=" << repeats
+                    << " testvol=" << testvol
+                    << " testaccess=" << testaccess);
 
                 // create cyclic permutation for each processor
                 if (use_permutation)
@@ -232,10 +267,10 @@ void testfunc( char* memarea, const size_t memsize,
                     {
                         // test ran for less than one second, repeat test and scale repeat factor
                         factor = thrsize * repeats * 3/2 / (ts2-ts1);
-                        std::cerr << "run time = " << (ts2-ts1) << " -> rerunning test with repeat factor=" << factor << std::endl;
+                        ERR("run time = " << (ts2-ts1) << " -> rerunning test with repeat factor=" << factor);
                     }
 
-                    --areasize_;
+                    --p_areasize;
                     continue;
                 }
 
@@ -243,7 +278,7 @@ void testfunc( char* memarea, const size_t memsize,
 #pragma omp single
                 {
                     factor = thrsize * repeats * 3/2 / (ts2-ts1);
-                    std::cerr << "run time = " << (ts2-ts1) << " -> next test with repeat factor=" << factor << std::endl;
+                    ERR("run time = " << (ts2-ts1) << " -> next test with repeat factor=" << factor);
                 }
 
 #pragma omp single
@@ -301,15 +336,49 @@ int main(int argc, char* argv[])
 
     int opt;
 
-    while ( (opt = getopt(argc, argv, "f:")) != -1 )
+    while ( (opt = getopt(argc, argv, "f:s:p:P:")) != -1 )
     {
         switch (opt) {
         case 'f':
             g_funcfilter = optarg;
-            std::cerr << "Running only functions containing '" << g_funcfilter << "'" << std::endl;
+            ERR("Running only functions containing '" << g_funcfilter << "'");
             break;
+
+        case 's':
+            if (!parse_sizet(optarg, g_sizelimit)) {
+                ERR("Invalid parameter for -s <size limit>.");
+                exit(EXIT_FAILURE);
+            }
+            else if (g_sizelimit == 0) {
+                ERR("Running test with array without size limit.");
+            }
+            else {
+                ERR("Running tests with array up to size " << g_sizelimit << ".");
+            }
+            break;
+
+        case 'p':
+            if (!parse_int(optarg, g_nprocs_min)) {
+                ERR("Invalid parameter for -p <lower nprocs limit>.");
+                exit(EXIT_FAILURE);
+            }
+            else {
+                ERR("Running tests with at least " << g_nprocs_min << " threads.");
+            }
+            break;
+
+        case 'P':
+            if (!parse_int(optarg, g_nprocs_max)) {
+                ERR("Invalid parameter for -p <upper nprocs limit>.");
+                exit(EXIT_FAILURE);
+            }
+            else {
+                ERR("Running tests with up to " << g_nprocs_max << " threads.");
+            }
+            break;
+
         default: /* '?' */
-            std::cerr << "Usage: " << argv[0] << " [-f funcfilter]" << std::endl;
+            ERR("Usage: " << argv[0] << " [-f funcfilter] [-s size limit] [-p min threads] [-P max threads]");
             exit(EXIT_FAILURE);
         }
     }
@@ -324,8 +393,8 @@ int main(int argc, char* argv[])
     // due to roundup in loop to next cache-line size, add one extra cache-line per processor
     memsize += omp_get_num_procs() * 128;
 
-    std::cout << "Detected " << physical_mem / 1024/1024 << " MiB physical RAM and " << omp_get_num_procs() << " CPUs. " << std::endl
-              << "Allocating " << memsize / 1024/1024 << " MiB for testing." << std::endl;
+    ERR("Detected " << physical_mem / 1024/1024 << " MiB physical RAM and " << omp_get_num_procs() << " CPUs. " << std::endl
+        << "Allocating " << memsize / 1024/1024 << " MiB for testing.");
 
     // allocate memory area
     char* memarea = (char*)malloc(memsize);
