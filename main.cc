@@ -91,7 +91,10 @@ void make_cyclic_permutation(void* memarea, size_t bytesize)
     void** ptrarray = (void**)memarea;
     size_t size = bytesize / sizeof(void*);
 
-    (std::cout << "Make permutation: filling").flush();
+#pragma omp single
+    (std::cout << "Make permutation:").flush();
+
+    (std::cout << " filling").flush();
 
     for (size_t i = 0; i < size; ++i)
     {
@@ -119,10 +122,14 @@ void make_cyclic_permutation(void* memarea, size_t bytesize)
             ptr = *(void**)ptr;         // walk pointer
             ++steps;
         }
-        std::cout << ", cycle = " << steps << std::endl;
+        (std::cout << " cycle=" << steps).flush();
 
         assert(steps == size);
     }
+
+#pragma omp barrier
+#pragma omp single
+    std::cout << std::endl;
 }
 
 /// List of array sizes to test
