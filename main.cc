@@ -159,15 +159,15 @@ static const size_t areasize_list[] = {
     (1024 + 256) * 1024,	// 1.25 MiB
     (1024 + 512) * 1024,	// 1.5 MiB
     (1024 + 768) * 1024,	// 1.75 MiB
-    2048 * 1024,	        // 2 MiB = common L2 cache size
+    2048 * 1024,                // 2 MiB = common L2 cache size
     (2048 + 256) * 1024,	// 2.25
     (2048 + 512) * 1024,	// 2.5
     (2048 + 768) * 1024,	// 2.75
-    3 * 1024 * 1024,	        // 3 MiB = common L2 cache size
+    3 * 1024 * 1024,            // 3 MiB = common L2 cache size
     4 * 1024 * 1024,            // 4 MiB
-    5 * 1024 * 1024,    	// 5 MiB
-    6 * 1024 * 1024,    	// 6 MiB = common L2 cache size
-    7 * 1024 * 1024,    	// 7 MiB
+    5 * 1024 * 1024,            // 5 MiB
+    6 * 1024 * 1024,            // 6 MiB = common L2 cache size
+    7 * 1024 * 1024,            // 7 MiB
     8 * 1024 * 1024,            // 8 MiB = common L2 cache size
     9 * 1024 * 1024,
     10 * 1024 * 1024,
@@ -225,7 +225,7 @@ void testfunc( char* memarea, const size_t memsize,
 
             size_t thrsize = *areasize / nprocs;            // divide area by processor number
 
-            // unrolled tests do 16 accesses without loop check, thus align upward 
+            // unrolled tests do 16 accesses without loop check, thus align upward
             // to next multiple of 16*size (128 bytes for 64-bit and 256 bytes for 128-bits)
             size_t unrollsize = 16 * access_size;
             thrsize = ((thrsize + unrollsize) / unrollsize) * unrollsize;
@@ -233,8 +233,8 @@ void testfunc( char* memarea, const size_t memsize,
             size_t testsize = thrsize * nprocs;             // total size tested
             if (memsize < testsize) continue;               // skip if tests don't fit into memory
 
-            // due to cache thrashing, space out processor's test areas
-            size_t thrsize_spaced = std::max<size_t>(thrsize, 32*1024*1024);
+            // due to cache thrashing in adjacent cache lines, space out processor's test areas
+            size_t thrsize_spaced = std::max<size_t>(thrsize, 4096);
             if (memsize < thrsize_spaced * nprocs) continue;        // skip if tests don't fit into memory
 
             size_t repeats = (factor + thrsize-1) / thrsize;         // round up
@@ -300,16 +300,16 @@ void testfunc( char* memarea, const size_t memsize,
                 result << "host=" << hostname << "\t";
 
                 result << "funcname=" << funcname << "\t"
-                           << "nprocs=" << nprocs << "\t"
-                           << "areasize=" << *areasize << "\t"
-                           << "threadsize=" << thrsize << "\t"
-                           << "testsize=" << testsize << "\t"
-                           << "repeats=" << repeats << "\t"
-                           << "testvol=" << testvol << "\t"
-                           << "testaccess=" << testaccess << "\t"
-                           << "time=" << std::setprecision(20) << runtime << "\t"
-                           << "bandwidth=" << testvol / runtime << "\t"
-                           << "rate=" << runtime / testaccess;
+                       << "nprocs=" << nprocs << "\t"
+                       << "areasize=" << *areasize << "\t"
+                       << "threadsize=" << thrsize << "\t"
+                       << "testsize=" << testsize << "\t"
+                       << "repeats=" << repeats << "\t"
+                       << "testvol=" << testvol << "\t"
+                       << "testaccess=" << testaccess << "\t"
+                       << "time=" << std::setprecision(20) << runtime << "\t"
+                       << "bandwidth=" << testvol / runtime << "\t"
+                       << "rate=" << runtime / testaccess;
 
                 std::cout << result.str() << std::endl;
 
