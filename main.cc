@@ -17,6 +17,8 @@ size_t g_sizelimit = 4*1024*1024*1024LLU;  // default size limit: 4 GiB
 int g_nprocs_min = 0;                      // lower limit to number of threads
 int g_nprocs_max = 0;                      // upper limit to number of threads
 
+bool g_testcycle = false; // option to test permutation cycle before measurement
+
 #define ERR(x)  do { std::cerr << x << std::endl; } while(0)
 #define ERRX(x)  do { std::cerr << x; } while(0)
 
@@ -111,9 +113,10 @@ void make_cyclic_permutation(void* memarea, size_t bytesize)
         std::swap( ptrarray[i], ptrarray[n-1] );
     }
 
-    (std::cout << " testing").flush();
-
+    if (g_testcycle)
     {
+        (std::cout << " testing").flush();
+
         void* ptr = ptrarray[0];
         size_t steps = 1;
 
@@ -125,6 +128,10 @@ void make_cyclic_permutation(void* memarea, size_t bytesize)
         (std::cout << " cycle=" << steps).flush();
 
         assert(steps == size);
+    }
+    else
+    {
+        (std::cout << " cycle=" << size).flush();
     }
 
 #pragma omp barrier
@@ -223,98 +230,102 @@ void testfunc( char* memarea, const size_t memsize,
                 continue;
             }
 
-            size_t thrsize = *areasize / nprocs;            // divide area by processor number
+            for (unsigned int round = 0; round < 1; ++round)
+            {
+                size_t thrsize = *areasize / nprocs;            // divide area by processor number
 
-            // unrolled tests do 16 accesses without loop check, thus align upward
-            // to next multiple of 16*size (128 bytes for 64-bit and 256 bytes for 128-bits)
-            size_t unrollsize = 16 * access_size;
-            thrsize = ((thrsize + unrollsize) / unrollsize) * unrollsize;
+                // unrolled tests do 16 accesses without loop check, thus align upward
+                // to next multiple of 16*size (128 bytes for 64-bit and 256 bytes for 128-bits)
+                size_t unrollsize = 16 * access_size;
+                thrsize = ((thrsize + unrollsize) / unrollsize) * unrollsize;
 
-            size_t testsize = thrsize * nprocs;             // total size tested
-            if (memsize < testsize) continue;               // skip if tests don't fit into memory
+                size_t testsize = thrsize * nprocs;             // total size tested
+                if (memsize < testsize) continue;               // skip if tests don't fit into memory
 
-            // due to cache thrashing in adjacent cache lines, space out processor's test areas
-            size_t thrsize_spaced = std::max<size_t>(thrsize, 4096);
-            if (memsize < thrsize_spaced * nprocs) continue;        // skip if tests don't fit into memory
+                // due to cache thrashing in adjacent cache lines, space out processor's test areas
+                //size_t thrsize_spaced = std::max<size_t>(thrsize, 32*1024*1024 + 4096);
+                size_t thrsize_spaced = std::max<size_t>(thrsize, 4*1024*1024 + 16*1024);
+                if (memsize < thrsize_spaced * nprocs) continue;        // skip if tests don't fit into memory
 
-            size_t repeats = (factor + thrsize-1) / thrsize;         // round up
+                size_t repeats = (factor + thrsize-1) / thrsize;         // round up
 
-            size_t testvol = testsize * repeats * access_size / skiplen;        // volume in bytes tested
-            size_t testaccess = testsize * repeats / skiplen;                   // number of accesses in test
+                size_t testvol = testsize * repeats * access_size / skiplen;        // volume in bytes tested
+                size_t testaccess = testsize * repeats / skiplen;                   // number of accesses in test
 
-            ERR("Running"
-                << " nprocs=" << nprocs
-                << " factor=" << factor
-                << " areasize=" << *areasize
-                << " thrsize=" << thrsize
-                << " testsize=" << testsize
-                << " repeats=" << repeats
-                << " testvol=" << testvol
-                << " testaccess=" << testaccess);
+                ERR("Running"
+                    << " nprocs=" << nprocs
+                    << " factor=" << factor
+                    << " areasize=" << *areasize
+                    << " thrsize=" << thrsize
+                    << " testsize=" << testsize
+                    << " repeats=" << repeats
+                    << " testvol=" << testvol
+                    << " testaccess=" << testaccess);
 
-            double runtime;
+                double runtime;
 
 #pragma omp parallel num_threads(nprocs)
-            {
-                // create cyclic permutation for each processor
-                if (use_permutation)
-                    make_cyclic_permutation(memarea + omp_get_thread_num() * thrsize_spaced, thrsize);
+                {
+                    // create cyclic permutation for each processor
+                    if (use_permutation)
+                        make_cyclic_permutation(memarea + omp_get_thread_num() * thrsize_spaced, thrsize);
 
 #pragma omp barrier
-                double ts1 = omp_get_wtime();
-                func(memarea + omp_get_thread_num() * thrsize_spaced, thrsize, repeats);
+                    double ts1 = omp_get_wtime();
+                    func(memarea + omp_get_thread_num() * thrsize_spaced, thrsize, repeats);
 
 #pragma omp barrier
-                double ts2 = omp_get_wtime();
+                    double ts2 = omp_get_wtime();
 #pragma omp master
-                runtime = ts2 - ts1;
-            }
+                    runtime = ts2 - ts1;
+                }
 
-            if ( runtime < 1.0 )
-            {
-                // test ran for less than one second, repeat test and scale repeat factor
-                factor = thrsize * repeats * 3/2 / runtime;
-                ERR("run time = " << runtime << " -> rerunning test with repeat factor=" << factor);
+                if ( runtime < 1.0 )
+                {
+                    // test ran for less than one second, repeat test and scale repeat factor
+                    factor = thrsize * repeats * 3/2 / runtime;
+                    ERR("run time = " << runtime << " -> rerunning test with repeat factor=" << factor);
 
-                --areasize;     // redo this areasize
-            }
-            else
-            {
-                // adapt repeat factor to observed memory bandwidth, so that next test will take approximately 1.5 sec
+                    --round;     // redo this areasize
+                }
+                else
+                {
+                    // adapt repeat factor to observed memory bandwidth, so that next test will take approximately 1.5 sec
 
-                factor = thrsize * repeats * 3/2 / runtime;
-                ERR("run time = " << runtime << " -> next test with repeat factor=" << factor);
+                    factor = thrsize * repeats * 3/2 / runtime;
+                    ERR("run time = " << runtime << " -> next test with repeat factor=" << factor);
 
-                std::ostringstream result;
-                result << "RESULT\t";
+                    std::ostringstream result;
+                    result << "RESULT\t";
 
-                // output date, time and hostname to result line
-                char datetime[64];
-                time_t tnow = time(NULL);
+                    // output date, time and hostname to result line
+                    char datetime[64];
+                    time_t tnow = time(NULL);
 
-                strftime(datetime, sizeof(datetime), "%Y-%m-%d %H:%M:%S", localtime(&tnow));
-                result << "datetime=" << datetime << "\t";
+                    strftime(datetime, sizeof(datetime), "%Y-%m-%d %H:%M:%S", localtime(&tnow));
+                    result << "datetime=" << datetime << "\t";
 
-                char hostname[256];
-                gethostname(hostname, sizeof(hostname));
-                result << "host=" << hostname << "\t";
+                    char hostname[256];
+                    gethostname(hostname, sizeof(hostname));
+                    result << "host=" << hostname << "\t";
 
-                result << "funcname=" << funcname << "\t"
-                       << "nprocs=" << nprocs << "\t"
-                       << "areasize=" << *areasize << "\t"
-                       << "threadsize=" << thrsize << "\t"
-                       << "testsize=" << testsize << "\t"
-                       << "repeats=" << repeats << "\t"
-                       << "testvol=" << testvol << "\t"
-                       << "testaccess=" << testaccess << "\t"
-                       << "time=" << std::setprecision(20) << runtime << "\t"
-                       << "bandwidth=" << testvol / runtime << "\t"
-                       << "rate=" << runtime / testaccess;
+                    result << "funcname=" << funcname << "\t"
+                           << "nprocs=" << nprocs << "\t"
+                           << "areasize=" << *areasize << "\t"
+                           << "threadsize=" << thrsize << "\t"
+                           << "testsize=" << testsize << "\t"
+                           << "repeats=" << repeats << "\t"
+                           << "testvol=" << testvol << "\t"
+                           << "testaccess=" << testaccess << "\t"
+                           << "time=" << std::setprecision(20) << runtime << "\t"
+                           << "bandwidth=" << testvol / runtime << "\t"
+                           << "rate=" << runtime / testaccess;
 
-                std::cout << result.str() << std::endl;
+                    std::cout << result.str() << std::endl;
 
-                std::ofstream resultfile("stats.txt", std::ios::app);
-                resultfile << result.str() << std::endl;
+                    std::ofstream resultfile("stats.txt", std::ios::app);
+                    resultfile << result.str() << std::endl;
+                }
             }
         }
     }
