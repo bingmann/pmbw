@@ -5,7 +5,7 @@ all:	pmbw stats2gnuplot
 	@echo "To pin threads, run:"
 	@echo "export OMP_PROC_BIND=true"
 
-pmbw: main.cc funcs_x86_64.h funcs_x86_128.h
+pmbw: main.cc funcs_x86_64.h
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
 stats2gnuplot: stats2gnuplot.cc

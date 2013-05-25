@@ -93,7 +93,6 @@ TestFunction::TestFunction(const char* _name, testfunc_type _func,
 // *** Test Functions with inline assembler loops
 
 #include "funcs_x86_64.h"
-#include "funcs_x86_128.h"
 
 // *** Main Program
 
