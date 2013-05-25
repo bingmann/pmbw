@@ -1,7 +1,31 @@
+/******************************************************************************
+ * main.cc
+ *
+ * Parallel Memory Bandwidth Measurement Tool.
+ *
+ ******************************************************************************
+ * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option)
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
+ *****************************************************************************/
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <vector>
+
 #include <stdlib.h>
 #include <inttypes.h>
 #include <string.h>
@@ -22,35 +46,56 @@ bool g_testcycle = false; // option to test permutation cycle before measurement
 #define ERR(x)  do { std::cerr << x << std::endl; } while(0)
 #define ERRX(x)  do { std::cerr << x; } while(0)
 
-// *** Prototypes for external assembler functions
+// *** Registry for memory testing function
 
-extern "C" {
+typedef void (*testfunc_type)(void* memarea, size_t size, size_t repeats);
 
-void funcFill(void* memarea, size_t size);
+struct TestFunction
+{
+    // identifier of the test function
+    const char* name;
 
-void funcSeqWrite64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void funcSeqWrite64PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
-void funcSeqRead64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void funcSeqRead64PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
-void funcSeqWrite128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void funcSeqWrite128PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
-void funcSeqRead128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void funcSeqRead128PtrUnrollLoop(void* memarea, size_t size, size_t repeats);
-void funcSeqWrite64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
-void funcSeqWrite64IndexUnrollLoop(void* memarea, size_t size, size_t repeats);
-void funcSeqRead64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
-void funcSeqRead64IndexUnrollLoop(void* memarea, size_t size, size_t repeats);
+    // function to call
+    testfunc_type func;
 
-void funcSkipWrite64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void funcSkipRead64PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void funcSkipWrite128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void funcSkipRead128PtrSimpleLoop(void* memarea, size_t size, size_t repeats);
-void funcSkipWrite64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
-void funcSkipRead64IndexSimpleLoop(void* memarea, size_t size, size_t repeats);
+    // number of bytes read/written per access (for latency calculation)
+    unsigned int bytes_per_access;
 
-void funcPermRead64SimpleLoop(void* memarea, size_t dummy, size_t repeats);
-void funcPermRead64UnrollLoop(void* memarea, size_t dummy, size_t repeats);
+    // bytes skipped foward to next access point (including bytes_per_access)
+    unsigned int access_offset;
+
+    // fill the area with a permutation before calling the func
+    bool make_permutation;
+
+    // constructor which also registers the function
+    TestFunction(const char* _name, testfunc_type _func,
+                 unsigned int _bpa, unsigned int _ao, bool _mp);
+};
+
+std::vector<TestFunction*> g_testfunc_list;
+
+TestFunction::TestFunction(const char* _name, testfunc_type _func,
+                           unsigned int _bpa, unsigned int _ao, bool _mp)
+    : name(_name), func(_func),
+      bytes_per_access(_bpa), access_offset(_ao), make_permutation(_mp)
+{
+    g_testfunc_list.push_back(this);
 }
+
+#define REGISTER(func, bytes, offset)                           \
+    static const class TestFunction* _##func##_register =       \
+        new TestFunction(#func,func,bytes,offset,false);
+
+#define REGISTER_PERM(func, bytes)                              \
+    static const class TestFunction* _##func##_register =       \
+        new TestFunction(#func,func,bytes,bytes,true);
+
+// *** Test Functions with inline assembler loops
+
+#include "funcs_x86_64.h"
+#include "funcs_x86_128.h"
+
+// *** Main Program
 
 /// parse a number as size_t with error detection
 static inline bool
@@ -71,12 +116,9 @@ parse_int(const char* value, int& out)
 }
 
 /// Simple linear congruential random generator
-class LCGRandom
+struct LCGRandom
 {
-private:
     size_t      xn;
-
-public:
 
     inline LCGRandom(size_t seed) : xn(seed) { }
 
@@ -203,12 +245,123 @@ static const size_t areasize_list[] = {
     0   // list termination
 };
 
-void testfunc( char* memarea, const size_t memsize,
-               void (*func)(void* memarea, size_t size, size_t repeats), const char* funcname,
-               int access_size, int skiplen, bool use_permutation )
+void testfunc_proc(char* memarea, const size_t memsize, const TestFunction* func, int nprocs)
 {
-    if (g_funcfilter && strstr(funcname,g_funcfilter) == NULL) {
-        ERR("Skipping " << funcname << " tests");
+    size_t factor = 1024*1024*1024; // repeat factor, approximate B/s bandwidth
+
+    for (const size_t* areasize = areasize_list; *areasize; ++areasize)
+    {
+        if (*areasize > g_sizelimit && g_sizelimit != 0) {
+            ERR("Skipping " << func->name << " test with " << *areasize << " array size due to -s <size limit>.");
+            continue;
+        }
+
+        for (unsigned int round = 0; round < 1; ++round)
+        {
+            size_t thrsize = *areasize / nprocs;            // divide area by processor number
+
+            // unrolled tests do 16 accesses without loop check, thus align upward
+            // to next multiple of 16*size (128 bytes for 64-bit and 256 bytes for 128-bits)
+            size_t unrollsize = 16 * func->bytes_per_access;
+            thrsize = ((thrsize + unrollsize) / unrollsize) * unrollsize;
+
+            size_t testsize = thrsize * nprocs;             // total size tested
+            if (memsize < testsize) continue;               // skip if tests don't fit into memory
+
+            // due to cache thrashing in adjacent cache lines, space out processor's test areas
+            //size_t thrsize_spaced = std::max<size_t>(thrsize, 32*1024*1024 + 4096);
+            size_t thrsize_spaced = std::max<size_t>(thrsize, 4*1024*1024 + 16*1024);
+            if (memsize < thrsize_spaced * nprocs) continue;        // skip if tests don't fit into memory
+
+            size_t repeats = (factor + thrsize-1) / thrsize;         // round up
+
+            // volume in bytes tested
+            size_t testvol = testsize * repeats * func->bytes_per_access / func->access_offset;
+            // number of accesses in test
+            size_t testaccess = testsize * repeats / func->access_offset;
+
+            ERR("Running"
+                << " nprocs=" << nprocs
+                << " factor=" << factor
+                << " areasize=" << *areasize
+                << " thrsize=" << thrsize
+                << " testsize=" << testsize
+                << " repeats=" << repeats
+                << " testvol=" << testvol
+                << " testaccess=" << testaccess);
+
+            double runtime;
+
+#pragma omp parallel num_threads(nprocs)
+            {
+                // create cyclic permutation for each processor
+                if (func->make_permutation)
+                    make_cyclic_permutation(memarea + omp_get_thread_num() * thrsize_spaced, thrsize);
+
+#pragma omp barrier
+                double ts1 = omp_get_wtime();
+                func->func(memarea + omp_get_thread_num() * thrsize_spaced, thrsize, repeats);
+
+#pragma omp barrier
+                double ts2 = omp_get_wtime();
+#pragma omp master
+                runtime = ts2 - ts1;
+            }
+
+            if ( runtime < 1.0 )
+            {
+                // test ran for less than one second, repeat test and scale repeat factor
+                factor = thrsize * repeats * 3/2 / runtime;
+                ERR("run time = " << runtime << " -> rerunning test with repeat factor=" << factor);
+
+                --round;     // redo this areasize
+            }
+            else
+            {
+                // adapt repeat factor to observed memory bandwidth, so that next test will take approximately 1.5 sec
+
+                factor = thrsize * repeats * 3/2 / runtime;
+                ERR("run time = " << runtime << " -> next test with repeat factor=" << factor);
+
+                std::ostringstream result;
+                result << "RESULT\t";
+
+                // output date, time and hostname to result line
+                char datetime[64];
+                time_t tnow = time(NULL);
+
+                strftime(datetime, sizeof(datetime), "%Y-%m-%d %H:%M:%S", localtime(&tnow));
+                result << "datetime=" << datetime << "\t";
+
+                char hostname[256];
+                gethostname(hostname, sizeof(hostname));
+                result << "host=" << hostname << "\t";
+
+                result << "funcname=" << func->name << "\t"
+                       << "nprocs=" << nprocs << "\t"
+                       << "areasize=" << *areasize << "\t"
+                       << "threadsize=" << thrsize << "\t"
+                       << "testsize=" << testsize << "\t"
+                       << "repeats=" << repeats << "\t"
+                       << "testvol=" << testvol << "\t"
+                       << "testaccess=" << testaccess << "\t"
+                       << "time=" << std::setprecision(20) << runtime << "\t"
+                       << "bandwidth=" << testvol / runtime << "\t"
+                       << "rate=" << runtime / testaccess;
+
+                std::cout << result.str() << std::endl;
+
+                std::ofstream resultfile("stats.txt", std::ios::app);
+                resultfile << result.str() << std::endl;
+            }
+        }
+    }
+}
+
+void testfunc(char* memarea, const size_t memsize, const TestFunction* func)
+{
+    if (g_funcfilter && strstr(func->name, g_funcfilter) == NULL) {
+        ERR("Skipping " << func->name << " tests");
         return;
     }
 
@@ -217,117 +370,11 @@ void testfunc( char* memarea, const size_t memsize,
     for (int nprocs = 1; nprocs <= maxprocs+2; ++nprocs)
     {
         if ( nprocs < g_nprocs_min || (g_nprocs_max && nprocs > g_nprocs_max) ) {
-            ERR("Skipping " << funcname << " tests with " << nprocs << " threads.");
+            ERR("Skipping " << func->name << " tests with " << nprocs << " threads.");
             continue;
         }
 
-        size_t factor = 1024*1024*1024;         // repeat factor, approximate B/s bandwidth
-
-        for (const size_t* areasize = areasize_list; *areasize; ++areasize)
-        {
-            if (*areasize > g_sizelimit && g_sizelimit != 0) {
-                ERR("Skipping " << funcname << " test with " << *areasize << " array size due to -s <size limit>.");
-                continue;
-            }
-
-            for (unsigned int round = 0; round < 1; ++round)
-            {
-                size_t thrsize = *areasize / nprocs;            // divide area by processor number
-
-                // unrolled tests do 16 accesses without loop check, thus align upward
-                // to next multiple of 16*size (128 bytes for 64-bit and 256 bytes for 128-bits)
-                size_t unrollsize = 16 * access_size;
-                thrsize = ((thrsize + unrollsize) / unrollsize) * unrollsize;
-
-                size_t testsize = thrsize * nprocs;             // total size tested
-                if (memsize < testsize) continue;               // skip if tests don't fit into memory
-
-                // due to cache thrashing in adjacent cache lines, space out processor's test areas
-                //size_t thrsize_spaced = std::max<size_t>(thrsize, 32*1024*1024 + 4096);
-                size_t thrsize_spaced = std::max<size_t>(thrsize, 4*1024*1024 + 16*1024);
-                if (memsize < thrsize_spaced * nprocs) continue;        // skip if tests don't fit into memory
-
-                size_t repeats = (factor + thrsize-1) / thrsize;         // round up
-
-                size_t testvol = testsize * repeats * access_size / skiplen;        // volume in bytes tested
-                size_t testaccess = testsize * repeats / skiplen;                   // number of accesses in test
-
-                ERR("Running"
-                    << " nprocs=" << nprocs
-                    << " factor=" << factor
-                    << " areasize=" << *areasize
-                    << " thrsize=" << thrsize
-                    << " testsize=" << testsize
-                    << " repeats=" << repeats
-                    << " testvol=" << testvol
-                    << " testaccess=" << testaccess);
-
-                double runtime;
-
-#pragma omp parallel num_threads(nprocs)
-                {
-                    // create cyclic permutation for each processor
-                    if (use_permutation)
-                        make_cyclic_permutation(memarea + omp_get_thread_num() * thrsize_spaced, thrsize);
-
-#pragma omp barrier
-                    double ts1 = omp_get_wtime();
-                    func(memarea + omp_get_thread_num() * thrsize_spaced, thrsize, repeats);
-
-#pragma omp barrier
-                    double ts2 = omp_get_wtime();
-#pragma omp master
-                    runtime = ts2 - ts1;
-                }
-
-                if ( runtime < 1.0 )
-                {
-                    // test ran for less than one second, repeat test and scale repeat factor
-                    factor = thrsize * repeats * 3/2 / runtime;
-                    ERR("run time = " << runtime << " -> rerunning test with repeat factor=" << factor);
-
-                    --round;     // redo this areasize
-                }
-                else
-                {
-                    // adapt repeat factor to observed memory bandwidth, so that next test will take approximately 1.5 sec
-
-                    factor = thrsize * repeats * 3/2 / runtime;
-                    ERR("run time = " << runtime << " -> next test with repeat factor=" << factor);
-
-                    std::ostringstream result;
-                    result << "RESULT\t";
-
-                    // output date, time and hostname to result line
-                    char datetime[64];
-                    time_t tnow = time(NULL);
-
-                    strftime(datetime, sizeof(datetime), "%Y-%m-%d %H:%M:%S", localtime(&tnow));
-                    result << "datetime=" << datetime << "\t";
-
-                    char hostname[256];
-                    gethostname(hostname, sizeof(hostname));
-                    result << "host=" << hostname << "\t";
-
-                    result << "funcname=" << funcname << "\t"
-                           << "nprocs=" << nprocs << "\t"
-                           << "areasize=" << *areasize << "\t"
-                           << "threadsize=" << thrsize << "\t"
-                           << "testsize=" << testsize << "\t"
-                           << "repeats=" << repeats << "\t"
-                           << "testvol=" << testvol << "\t"
-                           << "testaccess=" << testaccess << "\t"
-                           << "time=" << std::setprecision(20) << runtime << "\t"
-                           << "bandwidth=" << testvol / runtime << "\t"
-                           << "rate=" << runtime / testaccess;
-
-                    std::cout << result.str() << std::endl;
-
-                    std::ofstream resultfile("stats.txt", std::ios::app);
-                    resultfile << result.str() << std::endl;
-                }
-            }
-        }
+        testfunc_proc(memarea, memsize, func, nprocs);
     }
 }
 
@@ -352,6 +399,15 @@ int main(int argc, char* argv[])
         switch (opt) {
         case 'f':
             g_funcfilter = optarg;
+
+            if (strcmp(g_funcfilter,"list") == 0)
+            {
+                std::cout << "Test Function List" << std::endl;
+                for (size_t i = 0; i < g_testfunc_list.size(); ++i)
+                    std::cout << "  " << g_testfunc_list[i]->name << std::endl;
+                return 0;
+            }
+
             ERR("Running only functions containing '" << g_funcfilter << "'");
             break;
 
@@ -410,40 +466,17 @@ int main(int argc, char* argv[])
     // allocate memory area
     char* memarea = (char*)malloc(memsize);
 
-    funcFill(memarea, memsize);
+    // fill memory with junk, but this allocates physical memory
+    memset(memarea, 1, sizeof(memarea));
 
     // *** perform memory tests
 
     unlink("stats.txt");
 
-#define TESTFUNC(x,bits,skip)           testfunc(memarea, memsize, x, #x, bits, skip, false)
-#define TESTFUNC_PERM(x,bits,skip)      testfunc(memarea, memsize, x, #x, bits, skip, true)
-
-    TESTFUNC( funcSeqRead64PtrSimpleLoop, 8, 8 );
-    TESTFUNC( funcSeqRead64PtrUnrollLoop, 8, 8 );
-    TESTFUNC( funcSeqWrite64PtrSimpleLoop, 8, 8 );
-    TESTFUNC( funcSeqWrite64PtrUnrollLoop, 8, 8 );
-
-    TESTFUNC( funcSeqRead128PtrSimpleLoop, 16, 16 );
-    TESTFUNC( funcSeqRead128PtrUnrollLoop, 16, 16 );
-    TESTFUNC( funcSeqWrite128PtrSimpleLoop, 16, 16 );
-    TESTFUNC( funcSeqWrite128PtrUnrollLoop, 16, 16 );
-
-    TESTFUNC( funcSeqRead64IndexSimpleLoop, 8, 8 );
-    TESTFUNC( funcSeqRead64IndexUnrollLoop, 8, 8 );
-    TESTFUNC( funcSeqWrite64IndexSimpleLoop, 8, 8 );
-    TESTFUNC( funcSeqWrite64IndexUnrollLoop, 8, 8 );
-
-    TESTFUNC( funcSkipRead64PtrSimpleLoop, 8, 64+8 );
-    TESTFUNC( funcSkipWrite64PtrSimpleLoop, 8, 64+8 );
-    TESTFUNC( funcSkipRead128PtrSimpleLoop, 8, 64+16 );
-    TESTFUNC( funcSkipWrite128PtrSimpleLoop, 16, 64+16 );
-
-    TESTFUNC( funcSkipRead64IndexSimpleLoop, 8, 64+8 );
-    TESTFUNC( funcSkipWrite64IndexSimpleLoop, 8, 64+8 );
-
-    TESTFUNC_PERM( funcPermRead64SimpleLoop, 8, 8 );
-    TESTFUNC_PERM( funcPermRead64UnrollLoop, 8, 8 );
+    for (size_t i = 0; i < g_testfunc_list.size(); ++i)
+    {
+        testfunc(memarea, memsize, g_testfunc_list[i]);
+    }
 
     free(memarea);
 

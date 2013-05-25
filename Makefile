@@ -11,8 +11,8 @@ all:	pmbw stats2gnuplot
 pmbw: funcs.o main.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-main.o: main.cc
-	$(CXX) $(CXXFLAGS) -c -o $@ $^
+main.o: main.cc funcs_x86_64.h funcs_x86_128.h
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 funcs.o: funcs.asm
 	$(NASM) $(NASMFLAGS) funcs.asm
@@ -24,4 +24,4 @@ stats2gnuplot.o: stats2gnuplot.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $^
 
 clean:
-	rm *.o pmbw stats2gnuplot
+	rm -f *.o pmbw stats2gnuplot

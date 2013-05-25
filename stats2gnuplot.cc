@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <unistd.h>
 
 // *** Warnings Output Function
 
@@ -26,30 +27,54 @@ bool gopt_warnings = false;
 
 static const char* funclist[] =
 {
-    "funcSeqRead64PtrSimpleLoop",
-    "funcSeqRead64PtrUnrollLoop",
-    "funcSeqWrite64PtrSimpleLoop",
-    "funcSeqWrite64PtrUnrollLoop",
+    "ScanWrite32PtrSimpleLoop",
+    "ScanWrite32PtrUnrollLoop",
 
-    "funcSeqRead128PtrSimpleLoop",
-    "funcSeqRead128PtrUnrollLoop",
-    "funcSeqWrite128PtrSimpleLoop",
-    "funcSeqWrite128PtrUnrollLoop",
+    "ScanRead64PtrSimpleLoop",
+    "ScanRead64PtrUnrollLoop",
+    "ScanWrite64PtrSimpleLoop",
+    "ScanWrite64PtrUnrollLoop",
 
-    "funcSeqRead64IndexSimpleLoop",
-    "funcSeqRead64IndexUnrollLoop",
-    "funcSeqWrite64IndexSimpleLoop",
-    "funcSeqWrite64IndexUnrollLoop",
+    "ScanRead128PtrSimpleLoop",
+    "ScanRead128PtrUnrollLoop",
+    "ScanWrite128PtrSimpleLoop",
+    "ScanWrite128PtrUnrollLoop",
 
-    "funcSkipRead64PtrSimpleLoop",
-    "funcSkipWrite64PtrSimpleLoop",
-    "funcSkipRead128PtrSimpleLoop",
-    "funcSkipWrite128PtrSimpleLoop",
-    "funcSkipRead64IndexSimpleLoop",
-    "funcSkipWrite64IndexSimpleLoop",
+    "ScanRead64IndexSimpleLoop",
+    "ScanRead64IndexUnrollLoop",
+    "ScanWrite64IndexSimpleLoop",
+    "ScanWrite64IndexUnrollLoop",
 
-    "funcPermRead64SimpleLoop",
-    "funcPermRead64UnrollLoop",
+    "PermRead64SimpleLoop",
+    "PermRead64UnrollLoop",
+
+    "cScanWrite32PtrSimpleLoop",
+    "cScanWrite32PtrUnrollLoop",
+
+    "cScanRead64PtrSimpleLoop",
+    "cScanRead64PtrUnrollLoop",
+    "cScanWrite64PtrSimpleLoop",
+    "cScanWrite64PtrUnrollLoop",
+
+    "cScanRead128PtrSimpleLoop",
+    "cScanRead128PtrUnrollLoop",
+    "cScanWrite128PtrSimpleLoop",
+    "cScanWrite128PtrUnrollLoop",
+
+    "cScanRead64IndexSimpleLoop",
+    "cScanRead64IndexUnrollLoop",
+    "cScanWrite64IndexSimpleLoop",
+    "cScanWrite64IndexUnrollLoop",
+
+    "cPermRead64SimpleLoop",
+    "cPermRead64UnrollLoop",
+
+    "ScanRead64PtrSimpleLoopLea",
+    "ScanRead64PtrSimpleLoopAdd",
+
+    "ScanWrite64PtrSimpleLoopLea",
+    "ScanWrite64PtrSimpleLoopAdd",
+    
     NULL
 };
 
@@ -542,7 +567,7 @@ void plot_parallel(std::ostream& os)
 
 void output_gnuplot(std::ostream& os)
 {
-    P("set terminal pdf size 28cm,18cm linewidth 2.0");
+    P("set terminal pdf size 28cm,19.6cm linewidth 2.0 font \"Arial,18\"");
     P("set output 'plots-" << g_hostname << ".pdf'");
     P("");
     P("set pointsize 0.7");
