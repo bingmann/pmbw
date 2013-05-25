@@ -27,54 +27,21 @@ bool gopt_warnings = false;
 
 static const char* funclist[] =
 {
-    "ScanWrite32PtrSimpleLoop",
-    "ScanWrite32PtrUnrollLoop",
-
-    "ScanRead64PtrSimpleLoop",
-    "ScanRead64PtrUnrollLoop",
     "ScanWrite64PtrSimpleLoop",
     "ScanWrite64PtrUnrollLoop",
-
-    "ScanRead128PtrSimpleLoop",
-    "ScanRead128PtrUnrollLoop",
-    "ScanWrite128PtrSimpleLoop",
-    "ScanWrite128PtrUnrollLoop",
-
-    "ScanRead64IndexSimpleLoop",
-    "ScanRead64IndexUnrollLoop",
+    "ScanRead64PtrSimpleLoop",
+    "ScanRead64PtrUnrollLoop",
     "ScanWrite64IndexSimpleLoop",
     "ScanWrite64IndexUnrollLoop",
-
+    "ScanRead64IndexSimpleLoop",
+    "ScanRead64IndexUnrollLoop",
+    "ScanWrite128PtrSimpleLoop",
+    "ScanWrite128PtrUnrollLoop",
+    "ScanRead128PtrSimpleLoop",
+    "ScanRead128PtrUnrollLoop",
     "PermRead64SimpleLoop",
     "PermRead64UnrollLoop",
 
-    "cScanWrite32PtrSimpleLoop",
-    "cScanWrite32PtrUnrollLoop",
-
-    "cScanRead64PtrSimpleLoop",
-    "cScanRead64PtrUnrollLoop",
-    "cScanWrite64PtrSimpleLoop",
-    "cScanWrite64PtrUnrollLoop",
-
-    "cScanRead128PtrSimpleLoop",
-    "cScanRead128PtrUnrollLoop",
-    "cScanWrite128PtrSimpleLoop",
-    "cScanWrite128PtrUnrollLoop",
-
-    "cScanRead64IndexSimpleLoop",
-    "cScanRead64IndexUnrollLoop",
-    "cScanWrite64IndexSimpleLoop",
-    "cScanWrite64IndexUnrollLoop",
-
-    "cPermRead64SimpleLoop",
-    "cPermRead64UnrollLoop",
-
-    "ScanRead64PtrSimpleLoopLea",
-    "ScanRead64PtrSimpleLoopAdd",
-
-    "ScanWrite64PtrSimpleLoopLea",
-    "ScanWrite64PtrSimpleLoopAdd",
-    
     NULL
 };
 

@@ -1,27 +1,15 @@
 CXX = g++
 CXXFLAGS = -g -O2 -W -Wall -fopenmp
 
-NASM = nasm
-NASMFLAGS = -g -f elf64
-
 all:	pmbw stats2gnuplot
 	@echo "To pin threads, run:"
 	@echo "export OMP_PROC_BIND=true"
 
-pmbw: funcs.o main.o
+pmbw: main.cc funcs_x86_64.h funcs_x86_128.h
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+stats2gnuplot: stats2gnuplot.cc
 	$(CXX) $(CXXFLAGS) -o $@ $^
-
-main.o: main.cc funcs_x86_64.h funcs_x86_128.h
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
-
-funcs.o: funcs.asm
-	$(NASM) $(NASMFLAGS) funcs.asm
-
-stats2gnuplot: stats2gnuplot.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
-
-stats2gnuplot.o: stats2gnuplot.cc
-	$(CXX) $(CXXFLAGS) -c -o $@ $^
 
 clean:
 	rm -f *.o pmbw stats2gnuplot

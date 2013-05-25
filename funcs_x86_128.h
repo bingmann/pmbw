@@ -1,11 +1,8 @@
 /******************************************************************************
- * funcs_x86_64.h
+ * funcs_x86_128.h
  *
- * All 64-bit Test Functions: they are codename as 
- * Scan/Skip/Perm Read/Write 64 Ptr/Index Simple/Unroll Loop.
- *
- * Scan = consecutive scanning, Skip = with skipping bytes, Perm = walk
- * permutation cycle.
+ * All 128-bit Test Functions: they are codenamed as
+ * Scan Read/Write 64 Ptr Simple/Unroll Loop.
  *
  ******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
@@ -44,7 +41,7 @@ void cScanWrite128PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
     while (--repeats != 0);
 }
 
-REGISTER(cScanWrite128PtrSimpleLoop, 16, 16);
+//REGISTER(cScanWrite128PtrSimpleLoop, 16, 16);
 
 // 128-bit writer in a simple loop (Assembler version)
 void ScanWrite128PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
@@ -60,7 +57,6 @@ void ScanWrite128PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
         "mov    %%rsi, %%rax \n"        // rax = reset loop iterator
         "2: \n" // start of write loop
         "movdqa %%xmm0, (%%rax) \n"
-        //"lea    16(%%rax), %%rax \n"
         "add    $16, %%rax \n"
         // test write loop condition
         "cmp    %%rdi, %%rax \n"        // compare to end iterator
@@ -74,42 +70,6 @@ void ScanWrite128PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
 }
 
 REGISTER(ScanWrite128PtrSimpleLoop, 16, 16);
-
-// 128-bit writer in an unrolled loop (C version)
-void cScanWrite128PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
-{
-    uint128* begin = (uint128*)memarea;
-    uint128* end = begin + size / sizeof(uint128);
-    uint64_t val64 = 0xC0FFEEEEBABE0000;
-    uint128 value = uint128(val64,val64);
-
-    do {
-        uint128* p = begin;
-        do {
-            *(p+0) = value;
-            *(p+1) = value;
-            *(p+2) = value;
-            *(p+3) = value;
-            *(p+4) = value;
-            *(p+5) = value;
-            *(p+6) = value;
-            *(p+7) = value;
-            *(p+8) = value;
-            *(p+9) = value;
-            *(p+10) = value;
-            *(p+11) = value;
-            *(p+12) = value;
-            *(p+13) = value;
-            *(p+14) = value;
-            *(p+15) = value;
-            p += 16;
-        }
-        while(p < end);
-    }
-    while (--repeats != 0);
-}
-
-REGISTER(cScanWrite128PtrUnrollLoop, 16, 16);
 
 // 128-bit writer in an unrolled loop (Assembler version)
 void ScanWrite128PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
@@ -140,7 +100,6 @@ void ScanWrite128PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         "movdqa %%xmm0, 13*16(%%rax) \n"
         "movdqa %%xmm0, 14*16(%%rax) \n"
         "movdqa %%xmm0, 15*16(%%rax) \n"
-        //"lea    16*16(%%rax), %%rax \n"
         "add    $16*16, %%rax \n"
         // test write loop condition
         "cmp    %%rdi, %%rax \n"        // compare to end iterator
@@ -169,7 +128,6 @@ void ScanRead128PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
         "mov    %%rsi, %%rax \n"        // rax = reset loop iterator
         "2: \n" // start of read loop
         "movdqa (%%rax), %%xmm0 \n"
-        //"lea    16(%%rax), %%rax \n"
         "add    $16, %%rax \n"
         // test read loop condition
         "cmp    %%rdi, %%rax \n"        // compare to end iterator
@@ -213,7 +171,6 @@ void ScanRead128PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         "movdqa 13*16(%%rax), %%xmm0 \n"
         "movdqa 14*16(%%rax), %%xmm0 \n"
         "movdqa 15*16(%%rax), %%xmm0 \n"
-        //"lea    16*16(%%rax), %%rax \n"
         "add    $16*16, %%rax \n"
         // test read loop condition
         "cmp    %%rdi, %%rax \n"        // compare to end iterator
