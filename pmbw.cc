@@ -1,5 +1,5 @@
 /******************************************************************************
- * main.cc
+ * pmbw.cc
  *
  * Parallel Memory Bandwidth Measurement Tool.
  *
