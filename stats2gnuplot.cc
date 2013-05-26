@@ -27,6 +27,16 @@ bool gopt_warnings = false;
 
 static const char* funclist[] =
 {
+    "ScanWrite32PtrSimpleLoop",
+    "ScanWrite32PtrUnrollLoop",
+    "ScanWrite32PtrMultiLoop",
+    "ScanRead32PtrSimpleLoop",
+    "ScanRead32PtrUnrollLoop",
+    "ScanRead32PtrMultiLoop",
+    "ScanWrite32IndexSimpleLoop",
+    "ScanRead32IndexSimpleLoop",
+    "cScanWrite32IndexSimpleLoop",
+
     "ScanWrite64PtrSimpleLoop",
     "ScanWrite64PtrUnrollLoop",
     "ScanRead64PtrSimpleLoop",
@@ -35,23 +45,18 @@ static const char* funclist[] =
     "ScanWrite64IndexUnrollLoop",
     "ScanRead64IndexSimpleLoop",
     "ScanRead64IndexUnrollLoop",
+
     "ScanWrite128PtrSimpleLoop",
     "ScanWrite128PtrUnrollLoop",
     "ScanRead128PtrSimpleLoop",
     "ScanRead128PtrUnrollLoop",
-    "PermRead64SimpleLoop",
-    "PermRead64UnrollLoop",
 
-    "ScanWrite32PtrSimpleLoop",
-    "ScanWrite32PtrUnrollLoop",
-    "ScanRead32PtrSimpleLoop",
-    "ScanRead32PtrUnrollLoop",
-    "cScanWrite32IndexSimpleLoop",
-    "ScanWrite32IndexSimpleLoop",
-    "ScanRead32IndexSimpleLoop",
-    "cPermRead32SimpleLoop",
     "PermRead32SimpleLoop",
     "PermRead32UnrollLoop",
+    "cPermRead32SimpleLoop",
+
+    "PermRead64SimpleLoop",
+    "PermRead64UnrollLoop",
 
     NULL
 };
@@ -65,7 +70,7 @@ struct Result
     std::string datetime;
     std::string host;
     std::string funcname;
-    size_t nprocs;
+    size_t nthreads;
     size_t areasize;
     size_t threadsize;
     size_t testsize;
@@ -78,7 +83,7 @@ struct Result
     size_t funcname_id;  // index of funcname in funclist (for nicer order)
 
     Result()
-        : nprocs(0), areasize(0), threadsize(0), testsize(0), repeats(0),
+        : nthreads(0), areasize(0), threadsize(0), testsize(0), repeats(0),
           testvol(0), testaccess(0),
           time(0), bandwidth(0), rate(0)
     {
@@ -87,14 +92,14 @@ struct Result
     /// parse a single RESULT key-value and save its information
     bool process_line_keyvalue(const std::string& key, const std::string& value);
 
-    /// sort order of results is: (funcname_id,nprocs,testsize)
+    /// sort order of results is: (funcname_id,nthreads,testsize)
     bool operator< (const Result& b) const
     {
         if (funcname_id == b.funcname_id) {
-            if (nprocs == b.nprocs) {
+            if (nthreads == b.nthreads) {
                 return testsize < b.testsize;
             }
-            return nprocs < b.nprocs;
+            return nthreads < b.nthreads;
         }
         return funcname_id < b.funcname_id;
     }
@@ -153,8 +158,8 @@ bool Result::process_line_keyvalue(const std::string& key, const std::string& va
         funcname = value;
         return find_funcname(funcname, funcname_id);
     }
-    else if (key == "nprocs") {
-        return parse_sizet(value, nprocs);
+    else if (key == "nthreads") {
+        return parse_sizet(value, nthreads);
     }
     else if (key == "areasize") {
         return parse_sizet(value, areasize);
@@ -365,49 +370,49 @@ void plot_data_latency(std::ostream& datass, const Result& r)
 
 /// show only sequential results with procs = 1
 bool filter_sequential(const Result& r) {
-    return (r.nprocs == 1);
+    return (r.nthreads == 1);
 }
 
 bool filter_sequential_nonpermutation(const Result& r) {
-    return (r.nprocs == 1) && (r.funcname.find("Perm") == std::string::npos);
+    return (r.nthreads == 1) && (r.funcname.find("Perm") == std::string::npos);
 }
 
 bool filter_sequential_64bit_reads(const Result& r) {
-    return (r.nprocs == 1) && (r.funcname.find("Read64") == std::string::npos);
+    return (r.nthreads == 1) && (r.funcname.find("Read64") == std::string::npos);
 }
 
 /// Plots showing just sequential memory bandwidth and latency
 void plot_sequential(std::ostream& os)
 {
     P("set key top right");
-    P("set title '" << g_hostname << " - One Processor Memory Bandwidth'");
+    P("set title '" << g_hostname << " - One Thread Memory Bandwidth'");
     P("set ylabel 'Bandwidth [GiB/s]'");
     P("set yrange [0:*]");
     plot_funcname_iteration(os, filter_sequential, plot_data_bandwidth);
 
     P("set key top left");
-    P("set title '" << g_hostname << " - One Processor Memory Latency'");
+    P("set title '" << g_hostname << " - One Thread Memory Latency'");
     P("set ylabel 'Access Time [ns]'");
     plot_funcname_iteration(os, filter_sequential, plot_data_latency);
 
     P("set key top left");
-    P("set title '" << g_hostname << " - One Processor Memory Latency (excluding Permutation)'");
+    P("set title '" << g_hostname << " - One Thread Memory Latency (excluding Permutation)'");
     P("set ylabel 'Access Time [ns]'");
     plot_funcname_iteration(os, filter_sequential_nonpermutation, plot_data_latency);
 
     P("set key top right");
-    P("set title '" << g_hostname << " - One Processor Memory Bandwidth (only 64-bit Reads)'");
+    P("set title '" << g_hostname << " - One Thread Memory Bandwidth (only 64-bit Reads)'");
     P("set ylabel 'Bandwidth [GiB/s]'");
     plot_funcname_iteration(os, filter_sequential_64bit_reads, plot_data_bandwidth);
 }
 
 /// Plot procedure: iterate over results, filter them to show only one funcname
-/// and output a plot containing plotlines for each nprocs
+/// and output a plot containing plotlines for each nthreads
 void plot_parallel_iteration(std::ostream& os, const std::string& funcname, data_print_func print_func)
 {
     std::ostringstream datass;
     std::vector<std::string> plotlines;
-    size_t cnprocs = 0;    // current nprocs
+    size_t cnthreads = 0;    // current nthreads
     size_t ctestsize = 0;  // current testsize
 
     // iterate over all results in order, separate funcnames and collect plotlines for each funcname
@@ -416,19 +421,19 @@ void plot_parallel_iteration(std::ostream& os, const std::string& funcname, data
         const Result& r = g_results[i];
         if (r.funcname != funcname) continue;
 
-        if (cnprocs == r.nprocs && ctestsize == r.testsize)
+        if (cnthreads == r.nthreads && ctestsize == r.testsize)
         {
-            WARN("Multiple results found for " << funcname << " nprocs " << cnprocs
+            WARN("Multiple results found for " << funcname << " nthreads " << cnthreads
                  << " testsize " << ctestsize << ", ignoring second.");
             continue;
         }
 
-        if (cnprocs != r.nprocs) // start new plot line
+        if (cnthreads != r.nthreads) // start new plot line
         {
             if (datass.str().size()) datass << "e\n";
 
-            plotlines.push_back("'-' using 1:2 title 'nprocs=" + toStr(r.nprocs) + "' with linespoints");
-            cnprocs = r.nprocs;
+            plotlines.push_back("'-' using 1:2 title 'nthr=" + toStr(r.nthreads) + "' with linespoints");
+            cnthreads = r.nthreads;
         }
 
         print_func(datass, r);
@@ -441,19 +446,19 @@ void plot_parallel_iteration(std::ostream& os, const std::string& funcname, data
 }
 
 /// Plot procedure: iterate over results, filter them to show only one funcname
-/// and output a plot containing plotlines for each nprocs. Calculate the
-/// speedup of memory bandwidth over the nprocs=1 entry.
+/// and output a plot containing plotlines for each nthreads. Calculate the
+/// speedup of memory bandwidth over the nthreads=1 entry.
 void plot_parallel_speedup_bandwidth(std::ostream& os, const std::string& funcname, double& avgspeedup)
 {
     std::ostringstream datass;
     std::vector<std::string> plotlines;
-    size_t cnprocs = 0;    // current nprocs
+    size_t cnthreads = 0;    // current nthreads
     size_t ctestsize = 0;  // current testsize
 
     avgspeedup = 0;
     size_t cntspeedup = 0;
-    std::map<size_t,double> seqbandwidth;       // map areasize -> sequential bandwidth (nprocs=1)
-    // areasize is used instead of testsize, because testsize may depend on rounding due to nprocs.
+    std::map<size_t,double> seqbandwidth;       // map areasize -> sequential bandwidth (nthreads=1)
+    // areasize is used instead of testsize, because testsize may depend on rounding due to nthreads.
 
     // iterate over all results in order, separate funcnames and collect plotlines for each funcname
     for (size_t i = 0; i < g_results.size(); ++i)
@@ -461,28 +466,28 @@ void plot_parallel_speedup_bandwidth(std::ostream& os, const std::string& funcna
         const Result& r = g_results[i];
         if (r.funcname != funcname) continue;
 
-        if (cnprocs == r.nprocs && ctestsize == r.testsize)
+        if (cnthreads == r.nthreads && ctestsize == r.testsize)
         {
-            WARN("Multiple results found for " << funcname << " nprocs " << cnprocs
+            WARN("Multiple results found for " << funcname << " nthreads " << cnthreads
                  << " testsize " << ctestsize << ", ignoring second.");
             continue;
         }
 
-        if (cnprocs != r.nprocs) // start new plot line
+        if (cnthreads != r.nthreads) // start new plot line
         {
             if (datass.str().size()) datass << "e\n";
 
-            plotlines.push_back("'-' using 1:2 title 'nprocs=" + toStr(r.nprocs) + "' with linespoints");
-            cnprocs = r.nprocs;
+            plotlines.push_back("'-' using 1:2 title 'nthr=" + toStr(r.nthreads) + "' with linespoints");
+            cnthreads = r.nthreads;
         }
 
-        if (r.nprocs == 1) {
+        if (r.nthreads == 1) {
             seqbandwidth[r.areasize] = r.bandwidth;
         }
 
         if (seqbandwidth[r.areasize] == 0)
         {
-            WARN("Missing sequential bandwidth in speedup plot for " << funcname << " nprocs " << cnprocs
+            WARN("Missing sequential bandwidth in speedup plot for " << funcname << " nthreads " << cnthreads
                  << " testsize " << ctestsize << ", skipping.");
         }
         else

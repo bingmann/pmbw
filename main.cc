@@ -31,22 +31,41 @@
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
+#include <time.h>
 
-#include <omp.h>
+#include <pthread.h>
 
-// *** Global Settings
+// -----------------------------------------------------------------------------
+// --- Global Settings and Variables
 
-const char* g_funcfilter;
-uint64_t g_sizelimit = 4*1024*1024*1024LLU;  // default size limit: 4 GiB
-int g_nprocs_min = 0;                      // lower limit to number of threads
-int g_nprocs_max = 0;                      // upper limit to number of threads
+// filter of functions to run, set by command line
+const char* gopt_funcfilter;
 
-bool g_testcycle = false; // option to test permutation cycle before measurement
+// set default size limit: 4 GiB
+uint64_t gopt_sizelimit = 4*1024*1024*1024LLU;
 
+// lower and uuper limit to number of threads
+int gopt_nthreads_min = 0, gopt_nthreads_max = 0;
+
+// option to test permutation cycle before measurement
+bool gopt_testcycle = false;
+
+// error writers
 #define ERR(x)  do { std::cerr << x << std::endl; } while(0)
 #define ERRX(x)  do { std::cerr << x; } while(0)
 
-// *** Registry for memory testing function
+// allocated memory area and size
+char* g_memarea = NULL;
+size_t g_memsize = 0;
+
+// global test function currently run
+const struct TestFunction* g_func = NULL;
+
+// number of physical cpus detected
+int g_physical_cpus;
+
+// -----------------------------------------------------------------------------
+// --- Registry for Memory Testing Functions
 
 typedef void (*testfunc_type)(void* memarea, size_t size, size_t repeats);
 
@@ -68,16 +87,16 @@ struct TestFunction
     bool make_permutation;
 
     // constructor which also registers the function
-    TestFunction(const char* _name, testfunc_type _func,
-                 unsigned int _bpa, unsigned int _ao, bool _mp);
+    TestFunction(const char* n, testfunc_type f,
+                 unsigned int bpa, unsigned int ao, bool mp);
 };
 
 std::vector<TestFunction*> g_testfunc_list;
 
-TestFunction::TestFunction(const char* _name, testfunc_type _func,
-                           unsigned int _bpa, unsigned int _ao, bool _mp)
-    : name(_name), func(_func),
-      bytes_per_access(_bpa), access_offset(_ao), make_permutation(_mp)
+TestFunction::TestFunction(const char* n, testfunc_type f,
+                           unsigned int bpa, unsigned int ao, bool mp)
+    : name(n), func(f),
+      bytes_per_access(bpa), access_offset(ao), make_permutation(mp)
 {
     g_testfunc_list.push_back(this);
 }
@@ -90,7 +109,8 @@ TestFunction::TestFunction(const char* _name, testfunc_type _func,
     static const class TestFunction* _##func##_register =       \
         new TestFunction(#func,func,bytes,bytes,true);
 
-// *** Test Functions with inline assembler loops
+// -----------------------------------------------------------------------------
+// --- Test Functions with Inline Assembler Loops
 
 #if __x86_64__
   #include "funcs_x86_64.h"
@@ -100,9 +120,10 @@ TestFunction::TestFunction(const char* _name, testfunc_type _func,
   #include "funcs_x86_32.h"
 #endif
 
-// *** Main Program
+// -----------------------------------------------------------------------------
+// --- Some Simple Subroutines
 
-/// parse a number as size_t with error detection
+// parse a number as size_t with error detection
 static inline bool
 parse_uint64t(const char* value, uint64_t& out)
 {
@@ -111,7 +132,7 @@ parse_uint64t(const char* value, uint64_t& out)
     return (endp && *endp == 0);
 }
 
-/// parse a number as int with error detection
+// parse a number as int with error detection
 static inline bool
 parse_int(const char* value, int& out)
 {
@@ -120,7 +141,7 @@ parse_int(const char* value, int& out)
     return (endp && *endp == 0);
 }
 
-/// Simple linear congruential random generator
+// Simple linear congruential random generator
 struct LCGRandom
 {
     uint64_t      xn;
@@ -134,60 +155,17 @@ struct LCGRandom
     }
 };
 
-/// Create a one-cycle permutation of pointers in the memory area
-void make_cyclic_permutation(void* memarea, size_t bytesize)
+static inline double timestamp()
 {
-    void** ptrarray = (void**)memarea;
-    size_t size = bytesize / sizeof(void*);
-
-#pragma omp single
-    (std::cout << "Make permutation:").flush();
-
-    (std::cout << " filling").flush();
-
-    for (size_t i = 0; i < size; ++i)
-    {
-        ptrarray[i] = &ptrarray[i];       // fill area with pointers to self-address
-    }
-
-    (std::cout << " permuting").flush();
-
-    LCGRandom srnd((size_t)ptrarray + 233349568);
-
-    for (size_t n = size; n > 1; --n)
-    {
-        size_t i = srnd() % (n-1);      // permute pointers to one-cycle
-        std::swap( ptrarray[i], ptrarray[n-1] );
-    }
-
-    if (g_testcycle)
-    {
-        (std::cout << " testing").flush();
-
-        void* ptr = ptrarray[0];
-        size_t steps = 1;
-
-        while ( ptr != &ptrarray[0] && steps < size*2 )
-        {
-            ptr = *(void**)ptr;         // walk pointer
-            ++steps;
-        }
-        (std::cout << " cycle=" << steps).flush();
-
-        assert(steps == size);
-    }
-    else
-    {
-        (std::cout << " cycle=" << size).flush();
-    }
-
-#pragma omp barrier
-#pragma omp single
-    std::cout << std::endl;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
-/// List of array sizes to test
-static const uint64_t areasize_list[] = {
+// -----------------------------------------------------------------------------
+// --- List of Array Sizes to Test
+
+const uint64_t areasize_list[] = {
     1 * 1024,                   // 1 KiB
     2 * 1024,
     3 * 1024,
@@ -250,82 +228,180 @@ static const uint64_t areasize_list[] = {
     0   // list termination
 };
 
-void testfunc_proc(char* memarea, const size_t memsize, const TestFunction* func, int nprocs)
+// -----------------------------------------------------------------------------
+// --- Main Program
+
+// flag for terminating current test
+bool g_done;
+
+// global current number of threads
+int g_nthreads = 0;
+
+// synchronization barrier for current thread counter
+pthread_barrier_t g_barrier;
+
+// thread shared parameters for test function
+uint64_t g_thrsize;
+uint64_t g_thrsize_spaced;
+uint64_t g_repeats;
+
+
+// Create a one-cycle permutation of pointers in the memory area
+void make_cyclic_permutation(int thread_num, void* memarea, size_t bytesize)
 {
-    uint64_t factor = 1024*1024*1024; // repeat factor, approximate B/s bandwidth
+    void** ptrarray = (void**)memarea;
+    size_t size = bytesize / sizeof(void*);
+
+    if (thread_num == 0)
+        (std::cout << "Make permutation:").flush();
+
+    // *** Barrier ****
+    pthread_barrier_wait(&g_barrier);
+
+    (std::cout << " filling").flush();
+
+    for (size_t i = 0; i < size; ++i)
+    {
+        ptrarray[i] = &ptrarray[i]; // fill area with pointers to self-address
+    }
+
+    (std::cout << " permuting").flush();
+
+    LCGRandom srnd((size_t)ptrarray + 233349568);
+
+    for (size_t n = size; n > 1; --n)
+    {
+        size_t i = srnd() % (n-1);      // permute pointers to one-cycle
+        std::swap( ptrarray[i], ptrarray[n-1] );
+    }
+
+    if (gopt_testcycle)
+    {
+        (std::cout << " testing").flush();
+
+        void* ptr = ptrarray[0];
+        size_t steps = 1;
+
+        while ( ptr != &ptrarray[0] && steps < size*2 )
+        {
+            ptr = *(void**)ptr;         // walk pointer
+            ++steps;
+        }
+        (std::cout << " cycle=" << steps).flush();
+
+        assert(steps == size);
+    }
+    else
+    {
+        (std::cout << " cycle=" << size).flush();
+    }
+
+    // *** Barrier ****
+    pthread_barrier_wait(&g_barrier);
+
+    if (thread_num == 0)
+        std::cout << std::endl;
+}
+
+void* thread_master(void* cookie)
+{
+    // this weirdness is because (void*) cannot be cast to int and back.
+    int thread_num = *((int*)cookie);
+    delete (int*)cookie;
+
+    // initial repeat factor is just an approximate B/s bandwidth
+    uint64_t factor = 1024*1024*1024;
 
     for (const uint64_t* areasize = areasize_list; *areasize; ++areasize)
     {
-        if (*areasize > g_sizelimit && g_sizelimit != 0) {
-            ERR("Skipping " << func->name << " test with " << *areasize << " array size due to -s <size limit>.");
+        if (*areasize > gopt_sizelimit && gopt_sizelimit != 0) {
+            ERR("Skipping " << g_func->name << " test with " << *areasize
+                << " array size due to -s <size limit>.");
             continue;
         }
 
         for (unsigned int round = 0; round < 1; ++round)
         {
-            uint64_t thrsize = *areasize / nprocs;            // divide area by processor number
+            // divide area by thread number
+            g_thrsize = *areasize / g_nthreads;
 
-            // unrolled tests do 16 accesses without loop check, thus align upward
-            // to next multiple of 16*size (128 bytes for 64-bit and 256 bytes for 128-bits)
-            uint64_t unrollsize = 16 * func->bytes_per_access;
-            thrsize = ((thrsize + unrollsize) / unrollsize) * unrollsize;
+            // unrolled tests do 16 accesses without loop check, thus align
+            // upward to next multiple of 16*size (e.g. 128 bytes for 64-bit)
+            uint64_t unrollsize = 16 * g_func->bytes_per_access;
+            g_thrsize = ((g_thrsize + unrollsize) / unrollsize) * unrollsize;
 
-            uint64_t testsize = thrsize * nprocs;             // total size tested
-            if (memsize < testsize) continue;               // skip if tests don't fit into memory
+            // total size tested
+            uint64_t testsize = g_thrsize * g_nthreads;
 
-            // due to cache thrashing in adjacent cache lines, space out processor's test areas
-            //uint64_t thrsize_spaced = std::max<uint64_t>(thrsize, 32*1024*1024 + 4096);
-            uint64_t thrsize_spaced = std::max<uint64_t>(thrsize, 4*1024*1024 + 16*1024);
-            if (memsize < thrsize_spaced * nprocs) continue;        // skip if tests don't fit into memory
+            // skip if tests don't fit into memory
+            if (g_memsize < testsize) continue;
 
-            uint64_t repeats = (factor + thrsize-1) / thrsize;         // round up
+            // due to cache thrashing in adjacent cache lines, space out
+            // threads's test areas
+            g_thrsize_spaced = std::max<uint64_t>(g_thrsize, 4*1024*1024 + 16*1024);
+
+            // skip if tests don't fit into memory
+            if (g_memsize < g_thrsize_spaced * g_nthreads) continue;
+
+            g_repeats = (factor + g_thrsize-1) / g_thrsize;         // round up
 
             // volume in bytes tested
-            uint64_t testvol = testsize * repeats * func->bytes_per_access / func->access_offset;
+            uint64_t testvol = testsize * g_repeats * g_func->bytes_per_access / g_func->access_offset;
             // number of accesses in test
-            uint64_t testaccess = testsize * repeats / func->access_offset;
+            uint64_t testaccess = testsize * g_repeats / g_func->access_offset;
 
             ERR("Running"
-                << " nprocs=" << nprocs
+                << " nthreads=" << g_nthreads
                 << " factor=" << factor
                 << " areasize=" << *areasize
-                << " thrsize=" << thrsize
+                << " thrsize=" << g_thrsize
                 << " testsize=" << testsize
-                << " repeats=" << repeats
+                << " repeats=" << g_repeats
                 << " testvol=" << testvol
                 << " testaccess=" << testaccess);
 
+            g_done = false;
             double runtime;
 
-#pragma omp parallel num_threads(nprocs)
+            // synchronize with worker threads and run a worker ourselves
             {
-                // create cyclic permutation for each processor
-                if (func->make_permutation)
-                    make_cyclic_permutation(memarea + omp_get_thread_num() * thrsize_spaced, thrsize);
+                // *** Barrier ****
+                pthread_barrier_wait(&g_barrier);
 
-#pragma omp barrier
-                double ts1 = omp_get_wtime();
-                func->func(memarea + omp_get_thread_num() * thrsize_spaced, thrsize, repeats);
+                assert(!g_done);
 
-#pragma omp barrier
-                double ts2 = omp_get_wtime();
-#pragma omp master
+                // create cyclic permutation for each thread
+                if (g_func->make_permutation)
+                    make_cyclic_permutation(thread_num, g_memarea + thread_num * g_thrsize_spaced, g_thrsize);
+
+                // *** Barrier ****
+                pthread_barrier_wait(&g_barrier);
+                double ts1 = timestamp();
+
+                g_func->func(g_memarea + thread_num * g_thrsize_spaced, g_thrsize, g_repeats);
+
+                // *** Barrier ****
+                pthread_barrier_wait(&g_barrier);
+                double ts2 = timestamp();
+
                 runtime = ts2 - ts1;
             }
 
             if ( runtime < 1.0 )
             {
-                // test ran for less than one second, repeat test and scale repeat factor
-                factor = thrsize * repeats * 3/2 / runtime;
+                // test ran for less than one second, repeat test and scale
+                // repeat factor
+                factor = g_thrsize * g_repeats * 3/2 / runtime;
                 ERR("run time = " << runtime << " -> rerunning test with repeat factor=" << factor);
 
                 --round;     // redo this areasize
             }
             else
             {
-                // adapt repeat factor to observed memory bandwidth, so that next test will take approximately 1.5 sec
+                // adapt repeat factor to observed memory bandwidth, so that
+                // next test will take approximately 1.5 sec
 
-                factor = thrsize * repeats * 3/2 / runtime;
+                factor = g_thrsize * g_repeats * 3/2 / runtime;
                 ERR("run time = " << runtime << " -> next test with repeat factor=" << factor);
 
                 std::ostringstream result;
@@ -342,12 +418,12 @@ void testfunc_proc(char* memarea, const size_t memsize, const TestFunction* func
                 gethostname(hostname, sizeof(hostname));
                 result << "host=" << hostname << "\t";
 
-                result << "funcname=" << func->name << "\t"
-                       << "nprocs=" << nprocs << "\t"
+                result << "funcname=" << g_func->name << "\t"
+                       << "nthreads=" << g_nthreads << "\t"
                        << "areasize=" << *areasize << "\t"
-                       << "threadsize=" << thrsize << "\t"
+                       << "threadsize=" << g_thrsize << "\t"
                        << "testsize=" << testsize << "\t"
-                       << "repeats=" << repeats << "\t"
+                       << "repeats=" << g_repeats << "\t"
                        << "testvol=" << testvol << "\t"
                        << "testaccess=" << testaccess << "\t"
                        << "time=" << std::setprecision(20) << runtime << "\t"
@@ -361,25 +437,76 @@ void testfunc_proc(char* memarea, const size_t memsize, const TestFunction* func
             }
         }
     }
+
+    g_done = true;
+
+    // *** Barrier ****
+    pthread_barrier_wait(&g_barrier);
+
+    return NULL;
 }
 
-void testfunc(char* memarea, const size_t memsize, const TestFunction* func)
+void* thread_worker(void* cookie)
 {
-    if (g_funcfilter && strstr(func->name, g_funcfilter) == NULL) {
+    // this weirdness is because (void*) cannot be cast to int and back.
+    int thread_num = *((int*)cookie);
+    delete (int*)cookie;
+
+    while (1)
+    {
+        // *** Barrier ****
+        pthread_barrier_wait(&g_barrier);
+
+        if (g_done) break;
+
+        // create cyclic permutation for each thread
+        if (g_func->make_permutation)
+            make_cyclic_permutation(thread_num, g_memarea + thread_num * g_thrsize_spaced, g_thrsize);
+
+        // *** Barrier ****
+        pthread_barrier_wait(&g_barrier);
+
+        g_func->func(g_memarea + thread_num * g_thrsize_spaced, g_thrsize, g_repeats);
+
+        // *** Barrier ****
+        pthread_barrier_wait(&g_barrier);
+    }
+
+    return NULL;
+}
+
+void testfunc(const TestFunction* func)
+{
+    if (gopt_funcfilter && strstr(func->name, gopt_funcfilter) == NULL) {
         ERR("Skipping " << func->name << " tests");
         return;
     }
 
-    const int maxprocs = omp_get_num_procs();
-
-    for (int nprocs = 1; nprocs <= maxprocs+2; ++nprocs)
+    for (int nthreads = 1; nthreads <= g_physical_cpus + 2; ++nthreads)
     {
-        if ( nprocs < g_nprocs_min || (g_nprocs_max && nprocs > g_nprocs_max) ) {
-            ERR("Skipping " << func->name << " tests with " << nprocs << " threads.");
+        if ( nthreads < gopt_nthreads_min ||
+             (gopt_nthreads_max && nthreads > gopt_nthreads_max) )
+        {
+            ERR("Skipping " << func->name << " tests with " << nthreads << " threads.");
             continue;
         }
 
-        testfunc_proc(memarea, memsize, func, nprocs);
+        // globally set test function and thread number
+        g_func = func;
+        g_nthreads = nthreads;
+
+        // create barrier and run threads
+        pthread_barrier_init(&g_barrier, NULL, nthreads);
+
+        pthread_t thr[nthreads];
+        pthread_create(&thr[0], NULL, thread_master, new int(0));
+        for (int p = 1; p < nthreads; ++p)
+            pthread_create(&thr[p], NULL, thread_worker, new int(p));
+
+        for (int p = 0; p < nthreads; ++p)
+            pthread_join(thr[p], NULL);
+
+        pthread_barrier_destroy(&g_barrier);
     }
 }
 
@@ -403,9 +530,9 @@ int main(int argc, char* argv[])
     {
         switch (opt) {
         case 'f':
-            g_funcfilter = optarg;
+            gopt_funcfilter = optarg;
 
-            if (strcmp(g_funcfilter,"list") == 0)
+            if (strcmp(gopt_funcfilter,"list") == 0)
             {
                 std::cout << "Test Function List" << std::endl;
                 for (size_t i = 0; i < g_testfunc_list.size(); ++i)
@@ -413,39 +540,39 @@ int main(int argc, char* argv[])
                 return 0;
             }
 
-            ERR("Running only functions containing '" << g_funcfilter << "'");
+            ERR("Running only functions containing '" << gopt_funcfilter << "'");
             break;
 
         case 's':
-            if (!parse_uint64t(optarg, g_sizelimit)) {
+            if (!parse_uint64t(optarg, gopt_sizelimit)) {
                 ERR("Invalid parameter for -s <size limit>.");
                 exit(EXIT_FAILURE);
             }
-            else if (g_sizelimit == 0) {
+            else if (gopt_sizelimit == 0) {
                 ERR("Running test with array without size limit.");
             }
             else {
-                ERR("Running tests with array up to size " << g_sizelimit << ".");
+                ERR("Running tests with array up to size " << gopt_sizelimit << ".");
             }
             break;
 
         case 'p':
-            if (!parse_int(optarg, g_nprocs_min)) {
-                ERR("Invalid parameter for -p <lower nprocs limit>.");
+            if (!parse_int(optarg, gopt_nthreads_min)) {
+                ERR("Invalid parameter for -p <lower nthreads limit>.");
                 exit(EXIT_FAILURE);
             }
             else {
-                ERR("Running tests with at least " << g_nprocs_min << " threads.");
+                ERR("Running tests with at least " << gopt_nthreads_min << " threads.");
             }
             break;
 
         case 'P':
-            if (!parse_int(optarg, g_nprocs_max)) {
-                ERR("Invalid parameter for -p <upper nprocs limit>.");
+            if (!parse_int(optarg, gopt_nthreads_max)) {
+                ERR("Invalid parameter for -p <upper nthreads limit>.");
                 exit(EXIT_FAILURE);
             }
             else {
-                ERR("Running tests with up to " << g_nprocs_max << " threads.");
+                ERR("Running tests with up to " << gopt_nthreads_max << " threads.");
             }
             break;
 
@@ -458,21 +585,22 @@ int main(int argc, char* argv[])
     // *** allocate memory for tests
 
     size_t physical_mem = sysconf(_SC_PHYS_PAGES) * (size_t)sysconf(_SC_PAGESIZE);
+    g_physical_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
     // round down memory to largest power of two, still fitting in physical RAM
-    size_t memsize = round_up_power2(physical_mem) / 2;
+    g_memsize = round_up_power2(physical_mem) / 2;
 
-    // due to roundup in loop to next cache-line size, add one extra cache-line per processor
-    memsize += omp_get_num_procs() * 256;
+    // due to roundup in loop to next cache-line size, add one extra cache-line per thread
+    g_memsize += g_physical_cpus * 256;
 
-    ERR("Detected " << physical_mem / 1024/1024 << " MiB physical RAM and " << omp_get_num_procs() << " CPUs. " << std::endl
-        << "Allocating " << memsize / 1024/1024 << " MiB for testing.");
+    ERR("Detected " << physical_mem / 1024/1024 << " MiB physical RAM and " << g_physical_cpus << " CPUs. " << std::endl
+        << "Allocating " << g_memsize / 1024/1024 << " MiB for testing.");
 
     // allocate memory area
-    char* memarea = (char*)malloc(memsize);
+    g_memarea = (char*)malloc(g_memsize);
 
     // fill memory with junk, but this allocates physical memory
-    memset(memarea, 1, sizeof(memarea));
+    memset(g_memarea, 1, sizeof(g_memarea));
 
     // *** perform memory tests
 
@@ -480,10 +608,15 @@ int main(int argc, char* argv[])
 
     for (size_t i = 0; i < g_testfunc_list.size(); ++i)
     {
-        testfunc(memarea, memsize, g_testfunc_list[i]);
+        testfunc(g_testfunc_list[i]);
     }
 
-    free(memarea);
+    // cleanup
+
+    free(g_memarea);
+
+    for (size_t i = 0; i < g_testfunc_list.size(); ++i)
+        delete g_testfunc_list[i];
 
     return 0;
 }
