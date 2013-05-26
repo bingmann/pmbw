@@ -7,7 +7,7 @@ AC_CONFIG_SRCDIR(pmbw.cc)
 AC_CONFIG_AUX_DIR(acscripts)
 
 AM_INIT_AUTOMAKE(foreign)
-#AM_MAINTAINER_MODE
+AM_MAINTAINER_MODE
 
 # set debug info flag if no optimization flags are set.
 
