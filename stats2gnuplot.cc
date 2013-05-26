@@ -42,6 +42,17 @@ static const char* funclist[] =
     "PermRead64SimpleLoop",
     "PermRead64UnrollLoop",
 
+    "ScanWrite32PtrSimpleLoop",
+    "ScanWrite32PtrUnrollLoop",
+    "ScanRead32PtrSimpleLoop",
+    "ScanRead32PtrUnrollLoop",
+    "cScanWrite32IndexSimpleLoop",
+    "ScanWrite32IndexSimpleLoop",
+    "ScanRead32IndexSimpleLoop",
+    "cPermRead32SimpleLoop",
+    "PermRead32SimpleLoop",
+    "PermRead32UnrollLoop",
+
     NULL
 };
 
@@ -123,6 +134,7 @@ find_funcname(const std::string& funcname, size_t& funcname_id)
             return true;
         }
     }
+    std::cerr << "Unknown funcname=" << funcname << "\n";
     return false;
 }
 

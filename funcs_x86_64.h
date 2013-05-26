@@ -552,7 +552,7 @@ void ScanWrite32PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
         "mov    %%rsi, %%rcx \n"        // rcx = reset loop iterator
         "2: \n" // start of write loop
         "movl   %%eax, (%%rcx) \n"
-        "add    $8, %%rcx \n"
+        "add    $4, %%rcx \n"
         // test write loop condition
         "cmp    %%rdi, %%rcx \n"        // compare to end iterator
         "jb     2b \n"
@@ -576,22 +576,22 @@ void ScanWrite32PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         "1: \n"                         // start of repeat loop
         "mov    %%rsi, %%rcx \n"        // rcx = reset loop iterator
         "2: \n"                         // start of write loop
-        "movl   %%eax, 0*8(%%rcx) \n"
-        "movl   %%eax, 1*8(%%rcx) \n"
-        "movl   %%eax, 2*8(%%rcx) \n"
-        "movl   %%eax, 3*8(%%rcx) \n"
-        "movl   %%eax, 4*8(%%rcx) \n"
-        "movl   %%eax, 5*8(%%rcx) \n"
-        "movl   %%eax, 6*8(%%rcx) \n"
-        "movl   %%eax, 7*8(%%rcx) \n"
-        "movl   %%eax, 8*8(%%rcx) \n"
-        "movl   %%eax, 9*8(%%rcx) \n"
-        "movl   %%eax, 10*8(%%rcx) \n"
-        "movl   %%eax, 11*8(%%rcx) \n"
-        "movl   %%eax, 12*8(%%rcx) \n"
-        "movl   %%eax, 13*8(%%rcx) \n"
-        "movl   %%eax, 14*8(%%rcx) \n"
-        "movl   %%eax, 15*8(%%rcx) \n"
+        "movl   %%eax, 0*4(%%rcx) \n"
+        "movl   %%eax, 1*4(%%rcx) \n"
+        "movl   %%eax, 2*4(%%rcx) \n"
+        "movl   %%eax, 3*4(%%rcx) \n"
+        "movl   %%eax, 4*4(%%rcx) \n"
+        "movl   %%eax, 5*4(%%rcx) \n"
+        "movl   %%eax, 6*4(%%rcx) \n"
+        "movl   %%eax, 7*4(%%rcx) \n"
+        "movl   %%eax, 8*4(%%rcx) \n"
+        "movl   %%eax, 9*4(%%rcx) \n"
+        "movl   %%eax, 10*4(%%rcx) \n"
+        "movl   %%eax, 11*4(%%rcx) \n"
+        "movl   %%eax, 12*4(%%rcx) \n"
+        "movl   %%eax, 13*4(%%rcx) \n"
+        "movl   %%eax, 14*4(%%rcx) \n"
+        "movl   %%eax, 15*4(%%rcx) \n"
         "add    $16*4, %%rcx \n"
         // test write loop condition
         "cmp    %%rdi, %%rcx \n"        // compare to end iterator
@@ -604,7 +604,7 @@ void ScanWrite32PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         : "eax", "rcx", "rsi", "rdi");
 }
 
-REGISTER(ScanWrite32PtrUnrollLoop, 16, 16);
+REGISTER(ScanWrite32PtrUnrollLoop, 4, 4);
 
 // 32-bit reader in a simple loop (Assembler version)
 void ScanRead32PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
@@ -616,7 +616,7 @@ void ScanRead32PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
         "mov    %%rsi, %%rcx \n"        // rcx = reset loop iterator
         "2: \n"                         // start of write loop
         "movl   (%%rcx), %%eax \n"
-        "add    $8, %%rcx \n"
+        "add    $4, %%rcx \n"
         // test write loop condition
         "cmp    %%rdi, %%rcx \n"        // compare to end iterator
         "jb     2b \n"
@@ -628,7 +628,7 @@ void ScanRead32PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
         : "eax", "rcx", "rsi", "rdi");
 }
 
-REGISTER(ScanRead32PtrSimpleLoop, 16, 16);
+REGISTER(ScanRead32PtrSimpleLoop, 4, 4);
 
 // 32-bit reader in an unrolled loop (Assembler version)
 void ScanRead32PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
@@ -639,23 +639,23 @@ void ScanRead32PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         "1: \n"                         // start of repeat loop
         "mov    %%rsi, %%rcx \n"        // rcx = reset loop iterator
         "2: \n"                         // start of write loop
-        "movl   0*8(%%rcx), %%eax \n"
-        "movl   1*8(%%rcx), %%eax \n"
-        "movl   2*8(%%rcx), %%eax \n"
-        "movl   3*8(%%rcx), %%eax \n"
-        "movl   4*8(%%rcx), %%eax \n"
-        "movl   5*8(%%rcx), %%eax \n"
-        "movl   6*8(%%rcx), %%eax \n"
-        "movl   7*8(%%rcx), %%eax \n"
-        "movl   8*8(%%rcx), %%eax \n"
-        "movl   9*8(%%rcx), %%eax \n"
-        "movl   10*8(%%rcx), %%eax \n"
-        "movl   11*8(%%rcx), %%eax \n"
-        "movl   12*8(%%rcx), %%eax \n"
-        "movl   13*8(%%rcx), %%eax \n"
-        "movl   14*8(%%rcx), %%eax \n"
-        "movl   15*8(%%rcx), %%eax \n"
-        "add    $16*8, %%rcx \n"
+        "movl   0*4(%%rcx), %%eax \n"
+        "movl   1*4(%%rcx), %%eax \n"
+        "movl   2*4(%%rcx), %%eax \n"
+        "movl   3*4(%%rcx), %%eax \n"
+        "movl   4*4(%%rcx), %%eax \n"
+        "movl   5*4(%%rcx), %%eax \n"
+        "movl   6*4(%%rcx), %%eax \n"
+        "movl   7*4(%%rcx), %%eax \n"
+        "movl   8*4(%%rcx), %%eax \n"
+        "movl   9*4(%%rcx), %%eax \n"
+        "movl   10*4(%%rcx), %%eax \n"
+        "movl   11*4(%%rcx), %%eax \n"
+        "movl   12*4(%%rcx), %%eax \n"
+        "movl   13*4(%%rcx), %%eax \n"
+        "movl   14*4(%%rcx), %%eax \n"
+        "movl   15*4(%%rcx), %%eax \n"
+        "add    $16*4, %%rcx \n"
         // test write loop condition
         "cmp    %%rdi, %%rcx \n"        // compare to end iterator
         "jb     2b \n"
@@ -667,7 +667,7 @@ void ScanRead32PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         : "eax", "rcx", "rsi", "rdi");
 }
 
-REGISTER(ScanRead32PtrUnrollLoop, 16, 16);
+REGISTER(ScanRead32PtrUnrollLoop, 4, 4);
 
 // ****************************************************************************
 // ----------------------------------------------------------------------------

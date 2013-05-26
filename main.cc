@@ -37,7 +37,7 @@
 // *** Global Settings
 
 const char* g_funcfilter;
-size_t g_sizelimit = 4*1024*1024*1024LLU;  // default size limit: 4 GiB
+uint64_t g_sizelimit = 4*1024*1024*1024LLU;  // default size limit: 4 GiB
 int g_nprocs_min = 0;                      // lower limit to number of threads
 int g_nprocs_max = 0;                      // upper limit to number of threads
 
@@ -92,13 +92,19 @@ TestFunction::TestFunction(const char* _name, testfunc_type _func,
 
 // *** Test Functions with inline assembler loops
 
-#include "funcs_x86_64.h"
+#if __x86_64__
+  #include "funcs_x86_64.h"
+#elif __arm__
+  #include "funcs_arm.h"
+#else
+  #include "funcs_x86_32.h"
+#endif
 
 // *** Main Program
 
 /// parse a number as size_t with error detection
 static inline bool
-parse_sizet(const char* value, size_t& out)
+parse_uint64t(const char* value, uint64_t& out)
 {
     char* endp;
     out = strtoull(value, &endp, 10);
@@ -117,11 +123,11 @@ parse_int(const char* value, int& out)
 /// Simple linear congruential random generator
 struct LCGRandom
 {
-    size_t      xn;
+    uint64_t      xn;
 
-    inline LCGRandom(size_t seed) : xn(seed) { }
+    inline LCGRandom(uint64_t seed) : xn(seed) { }
 
-    inline size_t operator()()
+    inline uint64_t operator()()
     {
         xn = 0x27BB2EE687B0B0FDLLU * xn + 0xB504F32DLU;
         return xn;
@@ -181,7 +187,7 @@ void make_cyclic_permutation(void* memarea, size_t bytesize)
 }
 
 /// List of array sizes to test
-static const size_t areasize_list[] = {
+static const uint64_t areasize_list[] = {
     1 * 1024,                   // 1 KiB
     2 * 1024,
     3 * 1024,
@@ -246,9 +252,9 @@ static const size_t areasize_list[] = {
 
 void testfunc_proc(char* memarea, const size_t memsize, const TestFunction* func, int nprocs)
 {
-    size_t factor = 1024*1024*1024; // repeat factor, approximate B/s bandwidth
+    uint64_t factor = 1024*1024*1024; // repeat factor, approximate B/s bandwidth
 
-    for (const size_t* areasize = areasize_list; *areasize; ++areasize)
+    for (const uint64_t* areasize = areasize_list; *areasize; ++areasize)
     {
         if (*areasize > g_sizelimit && g_sizelimit != 0) {
             ERR("Skipping " << func->name << " test with " << *areasize << " array size due to -s <size limit>.");
@@ -257,27 +263,27 @@ void testfunc_proc(char* memarea, const size_t memsize, const TestFunction* func
 
         for (unsigned int round = 0; round < 1; ++round)
         {
-            size_t thrsize = *areasize / nprocs;            // divide area by processor number
+            uint64_t thrsize = *areasize / nprocs;            // divide area by processor number
 
             // unrolled tests do 16 accesses without loop check, thus align upward
             // to next multiple of 16*size (128 bytes for 64-bit and 256 bytes for 128-bits)
-            size_t unrollsize = 16 * func->bytes_per_access;
+            uint64_t unrollsize = 16 * func->bytes_per_access;
             thrsize = ((thrsize + unrollsize) / unrollsize) * unrollsize;
 
-            size_t testsize = thrsize * nprocs;             // total size tested
+            uint64_t testsize = thrsize * nprocs;             // total size tested
             if (memsize < testsize) continue;               // skip if tests don't fit into memory
 
             // due to cache thrashing in adjacent cache lines, space out processor's test areas
-            //size_t thrsize_spaced = std::max<size_t>(thrsize, 32*1024*1024 + 4096);
-            size_t thrsize_spaced = std::max<size_t>(thrsize, 4*1024*1024 + 16*1024);
+            //uint64_t thrsize_spaced = std::max<uint64_t>(thrsize, 32*1024*1024 + 4096);
+            uint64_t thrsize_spaced = std::max<uint64_t>(thrsize, 4*1024*1024 + 16*1024);
             if (memsize < thrsize_spaced * nprocs) continue;        // skip if tests don't fit into memory
 
-            size_t repeats = (factor + thrsize-1) / thrsize;         // round up
+            uint64_t repeats = (factor + thrsize-1) / thrsize;         // round up
 
             // volume in bytes tested
-            size_t testvol = testsize * repeats * func->bytes_per_access / func->access_offset;
+            uint64_t testvol = testsize * repeats * func->bytes_per_access / func->access_offset;
             // number of accesses in test
-            size_t testaccess = testsize * repeats / func->access_offset;
+            uint64_t testaccess = testsize * repeats / func->access_offset;
 
             ERR("Running"
                 << " nprocs=" << nprocs
@@ -377,7 +383,7 @@ void testfunc(char* memarea, const size_t memsize, const TestFunction* func)
     }
 }
 
-static inline size_t round_up_power2(size_t v)
+static inline uint64_t round_up_power2(uint64_t v)
 {
     v--;
     v |= v >> 1;     v |= v >> 2;
@@ -411,7 +417,7 @@ int main(int argc, char* argv[])
             break;
 
         case 's':
-            if (!parse_sizet(optarg, g_sizelimit)) {
+            if (!parse_uint64t(optarg, g_sizelimit)) {
                 ERR("Invalid parameter for -s <size limit>.");
                 exit(EXIT_FAILURE);
             }
