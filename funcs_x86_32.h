@@ -1,5 +1,5 @@
 /******************************************************************************
- * funcs_x86_64.h
+ * funcs_x86_32.h
  *
  * All Test Functions in 32-bit x86 assembly code: they are codenamed as
  * Scan/Perm Read/Write 32/64 Ptr/Index Simple/Unroll Loop.
@@ -34,7 +34,7 @@
 // ****************************************************************************
 
 // 32-bit writer in a simple loop (C version)
-void cScanWrite32PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
+void cScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     uint32_t* begin = (uint32_t*)memarea;
     uint32_t* end = begin + size / sizeof(uint32_t);
@@ -53,40 +53,34 @@ void cScanWrite32PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
 //REGISTER(cScanWrite32PtrSimpleLoop, 4, 4);
 
 // 32-bit writer in a simple loop (Assembler version)
-void ScanWrite32PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
+void ScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("mov    $0xC0FFEEEE, %%eax \n"  // rax = test value
-        "mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
         "1: \n" // start of repeat loop
-        "mov    %%esi, %%ecx \n"        // rcx = reset loop iterator
+        "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
         "2: \n" // start of write loop
         "mov    %%eax, (%%ecx) \n"
         "add    $4, %%ecx \n"
         // test write loop condition
-        "cmp    %%edi, %%ecx \n"        // compare to end iterator
+        "cmp    %[end], %%ecx \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "ecx", "esi", "edi");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "ecx");
 }
 
 REGISTER(ScanWrite32PtrSimpleLoop, 4, 4);
 
 // 32-bit writer in an unrolled loop (Assembler version)
-void ScanWrite32PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
+void ScanWrite32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("mov    $0xC0FFEEEE, %%eax \n"  // rax = test value
-        "mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
-        "1: \n"                         // start of repeat loop
-        "mov    %%esi, %%ecx \n"        // rcx = reset loop iterator
-        "2: \n"                         // start of write loop
+        "1: \n" // start of repeat loop
+        "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
+        "2: \n" // start of write loop
         "mov    %%eax, 0*4(%%ecx) \n"
         "mov    %%eax, 1*4(%%ecx) \n"
         "mov    %%eax, 2*4(%%ecx) \n"
@@ -105,51 +99,45 @@ void ScanWrite32PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         "mov    %%eax, 15*4(%%ecx) \n"
         "add    $16*4, %%ecx \n"
         // test write loop condition
-        "cmp    %%edi, %%ecx \n"        // compare to end iterator
+        "cmp    %[end], %%ecx \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "ecx", "esi", "edi");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "ecx");
 }
 
 REGISTER(ScanWrite32PtrUnrollLoop, 4, 4);
 
 // 32-bit reader in a simple loop (Assembler version)
-void ScanRead32PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
+void ScanRead32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
-        "1: \n"                         // start of repeat loop
-        "mov    %%esi, %%ecx \n"        // rcx = reset loop iterator
-        "2: \n"                         // start of write loop
+    asm("1: \n" // start of repeat loop
+        "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
+        "2: \n" // start of read loop
         "mov    (%%ecx), %%eax \n"
         "add    $4, %%ecx \n"
-        // test write loop condition
-        "cmp    %%edi, %%ecx \n"        // compare to end iterator
+        // test read loop condition
+        "cmp    %[end], %%ecx \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "ecx", "esi", "edi");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "ecx");
 }
 
 REGISTER(ScanRead32PtrSimpleLoop, 4, 4);
 
 // 32-bit reader in an unrolled loop (Assembler version)
-void ScanRead32PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
+void ScanRead32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
-        "1: \n"                         // start of repeat loop
-        "mov    %%esi, %%ecx \n"        // rcx = reset loop iterator
-        "2: \n"                         // start of write loop
+    asm("1: \n" // start of repeat loop
+        "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
+        "2: \n" // start of read loop
         "mov    0*4(%%ecx), %%eax \n"
         "mov    1*4(%%ecx), %%eax \n"
         "mov    2*4(%%ecx), %%eax \n"
@@ -167,15 +155,15 @@ void ScanRead32PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         "mov    14*4(%%ecx), %%eax \n"
         "mov    15*4(%%ecx), %%eax \n"
         "add    $16*4, %%ecx \n"
-        // test write loop condition
-        "cmp    %%edi, %%ecx \n"        // compare to end iterator
+        // test read loop condition
+        "cmp    %[end], %%ecx \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "ecx", "esi", "edi");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "ecx");
 }
 
 REGISTER(ScanRead32PtrUnrollLoop, 4, 4);
@@ -183,7 +171,7 @@ REGISTER(ScanRead32PtrUnrollLoop, 4, 4);
 // -----------------------------------------------------------------------------
 
 // 32-bit writer in an indexed loop (C version)
-void cScanWrite32IndexSimpleLoop(void* _memarea, size_t _size, size_t repeats)
+void cScanWrite32IndexSimpleLoop(char* _memarea, size_t _size, size_t repeats)
 {
     uint32_t* memarea = (uint32_t*)_memarea;
     uint32_t size = _size / sizeof(uint32_t);
@@ -199,7 +187,7 @@ void cScanWrite32IndexSimpleLoop(void* _memarea, size_t _size, size_t repeats)
 //REGISTER(cScanWrite32IndexSimpleLoop, 4, 4);
 
 // 32-bit writer in an indexed loop (Assembler version)
-void ScanWrite32IndexSimpleLoop(void* memarea, size_t size, size_t repeats)
+void ScanWrite32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("mov    $0xC0FFEEEE, %%eax \n" // rax = test value
         "1: \n" // start of repeat loop
@@ -221,7 +209,7 @@ void ScanWrite32IndexSimpleLoop(void* memarea, size_t size, size_t repeats)
 REGISTER(ScanWrite32IndexSimpleLoop, 4, 4);
 
 // 32-bit writer in an indexed unrolled loop (Assembler version)
-void ScanWrite32IndexUnrollLoop(void* memarea, size_t size, size_t repeats)
+void ScanWrite32IndexUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("mov    $0xC0FFEEEE, %%eax \n" // rax = test value
         "1: \n" // start of repeat loop
@@ -258,11 +246,11 @@ void ScanWrite32IndexUnrollLoop(void* memarea, size_t size, size_t repeats)
 REGISTER(ScanWrite32IndexUnrollLoop, 4, 4);
 
 // 32-bit reader in an indexed loop (Assembler version)
-void ScanRead32IndexSimpleLoop(void* memarea, size_t size, size_t repeats)
+void ScanRead32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("1: \n" // start of repeat loop
         "xor    %%ecx, %%ecx \n"        // rcx = reset index
-        "2: \n" // start of write loop
+        "2: \n" // start of read loop
         "mov    (%[memarea],%%ecx), %%eax \n"
         "add    $4, %%ecx \n"
         // test read loop condition
@@ -279,11 +267,11 @@ void ScanRead32IndexSimpleLoop(void* memarea, size_t size, size_t repeats)
 REGISTER(ScanRead32IndexSimpleLoop, 4, 4);
 
 // 32-bit reader in an indexed unrolled loop (Assembler version)
-void ScanRead32IndexUnrollLoop(void* memarea, size_t size, size_t repeats)
+void ScanRead32IndexUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("1: \n" // start of repeat loop
         "xor    %%ecx, %%ecx \n"        // rcx = reset index
-        "2: \n" // start of write loop
+        "2: \n" // start of read loop
         "mov    0*4(%[memarea],%%ecx), %%eax \n"
         "mov    1*4(%[memarea],%%ecx), %%eax \n"
         "mov    2*4(%[memarea],%%ecx), %%eax \n"
@@ -321,43 +309,37 @@ REGISTER(ScanRead32IndexUnrollLoop, 4, 4);
 // ****************************************************************************
 
 // 64-bit writer in a simple loop (Assembler version)
-void ScanWrite64PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
+void ScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("mov    $0xC0FFEEEE, %%eax \n"
         "movd   %%eax, %%xmm0 \n"
         "punpckldq %%xmm0, %%xmm0 \n"
-        "mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
         "1: \n" // start of repeat loop
-        "mov    %%esi, %%eax \n"        // rax = reset loop iterator
+        "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
         "2: \n" // start of write loop
         "movsd  %%xmm0, (%%eax) \n"
         "add    $8, %%eax \n"
         // test write loop condition
-        "cmp    %%edi, %%eax \n"        // compare to end iterator
+        "cmp    %[end], %%eax \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "esi", "edi", "xmm0");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "xmm0");
 }
 
 REGISTER(ScanWrite64PtrSimpleLoop, 8, 8);
 
 // 64-bit writer in an unrolled loop (Assembler version)
-void ScanWrite64PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
+void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("mov    $0xC0FFEEEE, %%eax \n"
         "movd   %%eax, %%xmm0 \n"
         "punpckldq %%xmm0, %%xmm0 \n"
-        "mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
         "1: \n" // start of repeat loop
-        "mov    %%esi, %%eax \n"        // rax = reset loop iterator
+        "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
         "2: \n" // start of write loop
         "movsd  %%xmm0, 0*16(%%eax) \n"
         "movsd  %%xmm0, 1*16(%%eax) \n"
@@ -381,51 +363,45 @@ void ScanWrite64PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
 
         "add    $16*8, %%eax \n"
         // test write loop condition
-        "cmp    %%edi, %%eax \n"        // compare to end iterator
+        "cmp    %[end], %%eax \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "esi", "edi", "xmm0");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "xmm0");
 }
 
 REGISTER(ScanWrite64PtrUnrollLoop, 8, 8);
 
 // 64-bit reader in a simple loop (Assembler version)
-void ScanRead64PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
+void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
-        "1: \n" // start of repeat loop
-        "mov    %%esi, %%eax \n"        // rax = reset loop iterator
-        "2: \n" // start of write loop
+    asm("1: \n" // start of repeat loop
+        "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
+        "2: \n" // start of read loop
         "movsd  (%%eax), %%xmm0 \n"
         "add    $8, %%eax \n"
-        // test write loop condition
-        "cmp    %%edi, %%eax \n"        // compare to end iterator
+        // test read loop condition
+        "cmp    %[end], %%eax \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "esi", "edi", "xmm0");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "xmm0");
 }
 
 REGISTER(ScanRead64PtrSimpleLoop, 8, 8);
 
 // 64-bit reader in an unrolled loop (Assembler version)
-void ScanRead64PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
+void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
-        "1: \n" // start of repeat loop
-        "mov    %%esi, %%eax \n"        // rax = reset loop iterator
-        "2: \n" // start of write loop
+    asm("1: \n" // start of repeat loop
+        "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
+        "2: \n" // start of read loop
         "movsd  0*8(%%eax), %%xmm0 \n"
         "movsd  1*8(%%eax), %%xmm0 \n"
         "movsd  2*8(%%eax), %%xmm0 \n"
@@ -447,20 +423,20 @@ void ScanRead64PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         "movsd  15*8(%%eax), %%xmm0 \n"
 
         "add    $16*8, %%eax \n"
-        // test write loop condition
-        "cmp    %%edi, %%eax \n"        // compare to end iterator
+        // test read loop condition
+        "cmp    %[end], %%eax \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "esi", "edi", "xmm0");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "xmm0");
 }
 
 REGISTER(ScanRead64PtrUnrollLoop, 8, 8);
 
-#if 0
+#if 1
 // ****************************************************************************
 // ----------------------------------------------------------------------------
 // 128-bit Operations
@@ -468,45 +444,39 @@ REGISTER(ScanRead64PtrUnrollLoop, 8, 8);
 // ****************************************************************************
 
 // 128-bit writer in a simple loop (Assembler version)
-void ScanWrite128PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
+void ScanWrite128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("mov    $0xC0FFEEEE, %%eax \n"
         "movd   %%eax, %%xmm0 \n"
         "punpckldq %%xmm0, %%xmm0 \n"
         "movlhps %%xmm0, %%xmm0 \n"     // xmm0 = test value
-        "mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
         "1: \n" // start of repeat loop
-        "mov    %%esi, %%eax \n"        // rax = reset loop iterator
+        "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
         "2: \n" // start of write loop
         "movdqa %%xmm0, (%%eax) \n"
         "add    $16, %%eax \n"
         // test write loop condition
-        "cmp    %%edi, %%eax \n"        // compare to end iterator
+        "cmp    %[end], %%eax \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "esi", "edi", "xmm0");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "xmm0");
 }
 
 REGISTER(ScanWrite128PtrSimpleLoop, 16, 16);
 
 // 128-bit writer in an unrolled loop (Assembler version)
-void ScanWrite128PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
+void ScanWrite128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("mov    $0xC0FFEEEE, %%eax \n"
         "movd   %%eax, %%xmm0 \n"
         "punpckldq %%xmm0, %%xmm0 \n"
         "movlhps %%xmm0, %%xmm0 \n"     // xmm0 = test value
-        "mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
         "1: \n" // start of repeat loop
-        "mov    %%esi, %%eax \n"        // rax = reset loop iterator
+        "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
         "2: \n" // start of write loop
         "movdqa %%xmm0, 0*16(%%eax) \n"
         "movdqa %%xmm0, 1*16(%%eax) \n"
@@ -530,51 +500,45 @@ void ScanWrite128PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
 
         "add    $16*16, %%eax \n"
         // test write loop condition
-        "cmp    %%edi, %%eax \n"        // compare to end iterator
+        "cmp    %[end], %%eax \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "esi", "edi", "xmm0");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "xmm0");
 }
 
 REGISTER(ScanWrite128PtrUnrollLoop, 16, 16);
 
 // 128-bit reader in a simple loop (Assembler version)
-void ScanRead128PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
+void ScanRead128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
-        "1: \n" // start of repeat loop
-        "mov    %%esi, %%eax \n"        // rax = reset loop iterator
-        "2: \n" // start of write loop
+    asm("1: \n" // start of repeat loop
+        "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
+        "2: \n" // start of read loop
         "movdqa (%%eax), %%xmm0 \n"
         "add    $16, %%eax \n"
-        // test write loop condition
-        "cmp    %%edi, %%eax \n"        // compare to end iterator
+        // test read loop condition
+        "cmp    %[end], %%eax \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "esi", "edi", "xmm0");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "xmm0");
 }
 
 REGISTER(ScanRead128PtrSimpleLoop, 8, 8);
 
 // 128-bit reader in an unrolled loop (Assembler version)
-void ScanRead128PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
+void ScanRead128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
-        "1: \n" // start of repeat loop
-        "mov    %%esi, %%eax \n"        // rax = reset loop iterator
-        "2: \n" // start of write loop
+    asm("1: \n" // start of repeat loop
+        "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
+        "2: \n" // start of read loop
         "movdqa 0*16(%%eax), %%xmm0 \n"
         "movdqa 1*16(%%eax), %%xmm0 \n"
         "movdqa 2*16(%%eax), %%xmm0 \n"
@@ -596,15 +560,15 @@ void ScanRead128PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         "movdqa 15*16(%%eax), %%xmm0 \n"
 
         "add    $16*16, %%eax \n"
-        // test write loop condition
-        "cmp    %%edi, %%eax \n"        // compare to end iterator
+        // test read loop condition
+        "cmp    %[end], %%eax \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "esi", "edi", "xmm0");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "xmm0");
 }
 
 REGISTER(ScanRead128PtrUnrollLoop, 8, 8);
@@ -617,40 +581,34 @@ REGISTER(ScanRead128PtrUnrollLoop, 8, 8);
 // ****************************************************************************
 
 // 16-bit writer in a simple loop (Assembler version)
-void ScanWrite16PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
+void ScanWrite16PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("mov    $0xCFFE, %%ax \n"       // ax = test value
-        "mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
         "1: \n" // start of repeat loop
-        "mov    %%esi, %%ecx \n"        // rcx = reset loop iterator
+        "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
         "2: \n" // start of write loop
         "mov    %%ax, (%%ecx) \n"
         "add    $2, %%ecx \n"
         // test write loop condition
-        "cmp    %%edi, %%ecx \n"        // compare to end iterator
+        "cmp    %[end], %%ecx \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "ecx", "esi", "edi");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "ecx");
 }
 
 REGISTER(ScanWrite16PtrSimpleLoop, 2, 2);
 
 // 16-bit writer in an unrolled loop (Assembler version)
-void ScanWrite16PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
+void ScanWrite16PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     asm("mov    $0xC0FFEEEE, %%eax \n"  // eax = test value
-        "mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
-        "1: \n"                         // start of repeat loop
-        "mov    %%esi, %%ecx \n"        // rcx = reset loop iterator
-        "2: \n"                         // start of write loop
+        "1: \n" // start of repeat loop
+        "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
+        "2: \n" // start of write loop
         "mov    %%ax, 0*2(%%ecx) \n"
         "mov    %%ax, 1*2(%%ecx) \n"
         "mov    %%ax, 2*2(%%ecx) \n"
@@ -669,51 +627,45 @@ void ScanWrite16PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         "mov    %%ax, 15*2(%%ecx) \n"
         "add    $16*2, %%ecx \n"
         // test write loop condition
-        "cmp    %%edi, %%ecx \n"        // compare to end iterator
+        "cmp    %[end], %%ecx \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "ecx", "esi", "edi");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "ecx");
 }
 
 REGISTER(ScanWrite16PtrUnrollLoop, 2, 2);
 
 // 16-bit reader in a simple loop (Assembler version)
-void ScanRead16PtrSimpleLoop(void* memarea, size_t size, size_t repeats)
+void ScanRead16PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
-        "1: \n"                         // start of repeat loop
-        "mov    %%esi, %%ecx \n"        // rcx = reset loop iterator
-        "2: \n"                         // start of write loop
+    asm("1: \n" // start of repeat loop
+        "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
+        "2: \n" // start of read loop
         "mov    (%%ecx), %%eax \n"
         "add    $2, %%ecx \n"
-        // test write loop condition
-        "cmp    %%edi, %%ecx \n"        // compare to end iterator
+        // test read loop condition
+        "cmp    %[end], %%ecx \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "ecx", "esi", "edi");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "ecx");
 }
 
 REGISTER(ScanRead16PtrSimpleLoop, 2, 2);
 
 // 16-bit reader in an unrolled loop (Assembler version)
-void ScanRead16PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
+void ScanRead16PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    %[memarea], %%esi \n"   // rsi = memarea
-        "mov    %[size], %%edi \n"
-        "add    %%esi, %%edi \n"        // rdi = memarea+size
-        "1: \n"                         // start of repeat loop
-        "mov    %%esi, %%ecx \n"        // rcx = reset loop iterator
-        "2: \n"                         // start of write loop
+    asm("1: \n" // start of repeat loop
+        "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
+        "2: \n" // start of read loop
         "mov    0*2(%%ecx), %%eax \n"
         "mov    1*2(%%ecx), %%eax \n"
         "mov    2*2(%%ecx), %%eax \n"
@@ -731,15 +683,15 @@ void ScanRead16PtrUnrollLoop(void* memarea, size_t size, size_t repeats)
         "mov    14*2(%%ecx), %%eax \n"
         "mov    15*2(%%ecx), %%eax \n"
         "add    $16*2, %%ecx \n"
-        // test write loop condition
-        "cmp    %%edi, %%ecx \n"        // compare to end iterator
+        // test read loop condition
+        "cmp    %[end], %%ecx \n"       // compare to end iterator
         "jb     2b \n"
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         :
-        : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "eax", "ecx", "esi", "edi");
+        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : "eax", "ecx");
 }
 
 REGISTER(ScanRead16PtrUnrollLoop, 2, 2);
@@ -751,7 +703,7 @@ REGISTER(ScanRead16PtrUnrollLoop, 2, 2);
 // ****************************************************************************
 
 // follow 32-bit permutation in a simple loop (C version)
-void cPermRead32SimpleLoop(void* memarea, size_t, size_t repeats)
+void cPermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
 {
     uint32_t* begin = (uint32_t*)memarea;
 
@@ -768,13 +720,13 @@ void cPermRead32SimpleLoop(void* memarea, size_t, size_t repeats)
 //REGISTER_PERM(cPermRead32SimpleLoop, 8);
 
 // follow 32-bit permutation in a simple loop (Assembler version)
-void PermRead32SimpleLoop(void* memarea, size_t, size_t repeats)
+void PermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
 {
     asm("1: \n" // start of repeat loop
         "mov    %[memarea], %%eax \n"   // rax = reset iterator
-        "2: \n" // start of write loop
+        "2: \n" // start of read loop
         "mov    (%%eax), %%eax \n"
-        // test write loop condition
+        // test read loop condition
         "cmp    %%eax, %[memarea] \n"   // compare to first iterator
         "jne    2b \n"
         // test repeat loop condition
@@ -788,11 +740,11 @@ void PermRead32SimpleLoop(void* memarea, size_t, size_t repeats)
 REGISTER_PERM(PermRead32SimpleLoop, 8);
 
 // follow 32-bit permutation in an unrolled loop (Assembler version)
-void PermRead32UnrollLoop(void* memarea, size_t, size_t repeats)
+void PermRead32UnrollLoop(char* memarea, size_t, size_t repeats)
 {
     asm("1: \n" // start of repeat loop
         "mov    %[memarea], %%eax \n"   // rax = reset iterator
-        "2: \n" // start of write loop
+        "2: \n" // start of read loop
         "mov    (%%eax), %%eax \n"
         "mov    (%%eax), %%eax \n"
         "mov    (%%eax), %%eax \n"
@@ -812,7 +764,7 @@ void PermRead32UnrollLoop(void* memarea, size_t, size_t repeats)
         "mov    (%%eax), %%eax \n"
         "mov    (%%eax), %%eax \n"
         "mov    (%%eax), %%eax \n"
-        // test write loop condition
+        // test read loop condition
         "cmp    %%eax, %[memarea] \n"   // compare to first iterator
         "jne    2b \n"
         // test repeat loop condition
