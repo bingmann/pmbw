@@ -245,7 +245,6 @@ uint64_t g_thrsize;
 uint64_t g_thrsize_spaced;
 uint64_t g_repeats;
 
-
 // Create a one-cycle permutation of pointers in the memory area
 void make_cyclic_permutation(int thread_num, void* memarea, size_t bytesize)
 {
@@ -412,22 +411,23 @@ void* thread_master(void* cookie)
                 time_t tnow = time(NULL);
 
                 strftime(datetime, sizeof(datetime), "%Y-%m-%d %H:%M:%S", localtime(&tnow));
-                result << "datetime=" << datetime << "\t";
+                result << "datetime=" << datetime << '\t';
 
                 char hostname[256];
                 gethostname(hostname, sizeof(hostname));
-                result << "host=" << hostname << "\t";
+                result << "host=" << hostname << '\t';
 
-                result << "funcname=" << g_func->name << "\t"
-                       << "nthreads=" << g_nthreads << "\t"
-                       << "areasize=" << *areasize << "\t"
-                       << "threadsize=" << g_thrsize << "\t"
-                       << "testsize=" << testsize << "\t"
-                       << "repeats=" << g_repeats << "\t"
-                       << "testvol=" << testvol << "\t"
-                       << "testaccess=" << testaccess << "\t"
-                       << "time=" << std::setprecision(20) << runtime << "\t"
-                       << "bandwidth=" << testvol / runtime << "\t"
+                result << "version=" << PACKAGE_VERSION << '\t'
+                       << "funcname=" << g_func->name << '\t'
+                       << "nthreads=" << g_nthreads << '\t'
+                       << "areasize=" << *areasize << '\t'
+                       << "threadsize=" << g_thrsize << '\t'
+                       << "testsize=" << testsize << '\t'
+                       << "repeats=" << g_repeats << '\t'
+                       << "testvol=" << testvol << '\t'
+                       << "testaccess=" << testaccess << '\t'
+                       << "time=" << std::setprecision(20) << runtime << '\t'
+                       << "bandwidth=" << testvol / runtime << '\t'
                        << "rate=" << runtime / testaccess;
 
                 std::cout << result.str() << std::endl;
