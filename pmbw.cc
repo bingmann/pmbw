@@ -67,7 +67,7 @@ int g_physical_cpus;
 // -----------------------------------------------------------------------------
 // --- Registry for Memory Testing Functions
 
-typedef void (*testfunc_type)(void* memarea, size_t size, size_t repeats);
+typedef void (*testfunc_type)(char* memarea, size_t size, size_t repeats);
 
 struct TestFunction
 {
@@ -600,7 +600,7 @@ int main(int argc, char* argv[])
     g_memarea = (char*)malloc(g_memsize);
 
     // fill memory with junk, but this allocates physical memory
-    memset(g_memarea, 1, sizeof(g_memarea));
+    memset(g_memarea, 1, g_memsize);
 
     // *** perform memory tests
 

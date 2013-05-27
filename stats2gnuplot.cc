@@ -432,7 +432,7 @@ void plot_parallel_iteration(std::ostream& os, const std::string& funcname, data
         {
             if (datass.str().size()) datass << "e\n";
 
-            plotlines.push_back("'-' using 1:2 title 'nthr=" + toStr(r.nthreads) + "' with linespoints");
+            plotlines.push_back("'-' using 1:2 title 'p=" + toStr(r.nthreads) + "' with linespoints");
             cnthreads = r.nthreads;
         }
 
@@ -477,7 +477,7 @@ void plot_parallel_speedup_bandwidth(std::ostream& os, const std::string& funcna
         {
             if (datass.str().size()) datass << "e\n";
 
-            plotlines.push_back("'-' using 1:2 title 'nthr=" + toStr(r.nthreads) + "' with linespoints");
+            plotlines.push_back("'-' using 1:2 title 'p=" + toStr(r.nthreads) + "' with linespoints");
             cnthreads = r.nthreads;
         }
 
