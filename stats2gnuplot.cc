@@ -27,15 +27,10 @@ bool gopt_warnings = false;
 
 static const char* funclist[] =
 {
-    "ScanWrite32PtrSimpleLoop",
-    "ScanWrite32PtrUnrollLoop",
-    "ScanWrite32PtrMultiLoop",
-    "ScanRead32PtrSimpleLoop",
-    "ScanRead32PtrUnrollLoop",
-    "ScanRead32PtrMultiLoop",
-    "ScanWrite32IndexSimpleLoop",
-    "ScanRead32IndexSimpleLoop",
-    "cScanWrite32IndexSimpleLoop",
+    "ScanWrite128PtrSimpleLoop",
+    "ScanWrite128PtrUnrollLoop",
+    "ScanRead128PtrSimpleLoop",
+    "ScanRead128PtrUnrollLoop",
 
     "ScanWrite64PtrSimpleLoop",
     "ScanWrite64PtrUnrollLoop",
@@ -46,17 +41,29 @@ static const char* funclist[] =
     "ScanRead64IndexSimpleLoop",
     "ScanRead64IndexUnrollLoop",
 
-    "ScanWrite128PtrSimpleLoop",
-    "ScanWrite128PtrUnrollLoop",
-    "ScanRead128PtrSimpleLoop",
-    "ScanRead128PtrUnrollLoop",
+    "ScanWrite32PtrSimpleLoop",
+    "ScanWrite32PtrUnrollLoop",
+    "ScanWrite32PtrMultiLoop",
+    "ScanRead32PtrSimpleLoop",
+    "ScanRead32PtrUnrollLoop",
+    "ScanRead32PtrMultiLoop",
+    "ScanWrite32IndexSimpleLoop",
+    "ScanWrite32IndexUnrollLoop",
+    "ScanRead32IndexSimpleLoop",
+    "ScanRead32IndexUnrollLoop",
+    "cScanWrite32IndexSimpleLoop",
+
+    "ScanWrite16PtrSimpleLoop",
+    "ScanWrite16PtrUnrollLoop",
+    "ScanRead16PtrSimpleLoop",
+    "ScanRead16PtrUnrollLoop",
+
+    "PermRead64SimpleLoop",
+    "PermRead64UnrollLoop",
 
     "PermRead32SimpleLoop",
     "PermRead32UnrollLoop",
     "cPermRead32SimpleLoop",
-
-    "PermRead64SimpleLoop",
-    "PermRead64UnrollLoop",
 
     NULL
 };
@@ -567,6 +574,7 @@ void output_gnuplot(std::ostream& os)
     P("set grid xtics ytics");
     P("set xtics 1");
     P("set xlabel 'Input Size log_2 [B]'");
+    P("set label 1 'pmbw " VERSION "' right at screen 0.98, screen 0.02");
 
     plot_sequential(os);
     plot_parallel(os);
