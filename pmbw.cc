@@ -34,6 +34,7 @@
 #include <time.h>
 
 #include <pthread.h>
+#include <malloc.h>
 
 // -----------------------------------------------------------------------------
 // --- Global Settings and Variables
@@ -43,6 +44,9 @@ const char* gopt_funcfilter;
 
 // set default size limit: 4 GiB
 uint64_t gopt_sizelimit = 4*1024*1024*1024LLU;
+
+// set memory limit
+uint64_t gopt_memlimit = 0;
 
 // lower and uuper limit to number of threads
 int gopt_nthreads_min = 0, gopt_nthreads_max = 0;
@@ -526,7 +530,7 @@ int main(int argc, char* argv[])
 
     int opt;
 
-    while ( (opt = getopt(argc, argv, "f:s:p:P:")) != -1 )
+    while ( (opt = getopt(argc, argv, "f:s:p:P:M:")) != -1 )
     {
         switch (opt) {
         case 'f':
@@ -553,6 +557,19 @@ int main(int argc, char* argv[])
             }
             else {
                 ERR("Running tests with array up to size " << gopt_sizelimit << ".");
+            }
+            break;
+
+        case 'M':
+            if (!parse_uint64t(optarg, gopt_memlimit)) {
+                ERR("Invalid parameter for -M <memory limit>.");
+                exit(EXIT_FAILURE);
+            }
+            else if (gopt_memlimit == 0) {
+                ERR("Lifting memory limit: allocating highest power of two fitting into RAM.");
+            }
+            else {
+                ERR("Setting memory limit to " << gopt_memlimit << ".");
             }
             break;
 
@@ -587,6 +604,10 @@ int main(int argc, char* argv[])
     size_t physical_mem = sysconf(_SC_PHYS_PAGES) * (size_t)sysconf(_SC_PAGESIZE);
     g_physical_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
+    // limit allocated memory via command line
+    if (gopt_memlimit && gopt_memlimit < physical_mem)
+        physical_mem = gopt_memlimit;
+
     // round down memory to largest power of two, still fitting in physical RAM
     g_memsize = round_up_power2(physical_mem) / 2;
 
@@ -597,7 +618,12 @@ int main(int argc, char* argv[])
         << "Allocating " << g_memsize / 1024/1024 << " MiB for testing.");
 
     // allocate memory area
-    g_memarea = (char*)malloc(g_memsize);
+    //g_memarea = (char*)malloc(g_memsize);
+
+    if (posix_memalign((void**)&g_memarea, 32, g_memsize) != 0) {
+        ERR("Error allocating memory.");
+        return -1;
+    }
 
     // fill memory with junk, but this allocates physical memory
     memset(g_memarea, 1, g_memsize);
