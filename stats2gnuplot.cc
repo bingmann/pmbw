@@ -20,7 +20,7 @@
 bool gopt_warnings = false;
 
 #define ERR(x)  do { std::cerr << x << std::endl; } while(0)
-#define ERRX(x)  do { std::cerr << x; } while(0)
+#define ERRX(x) do { std::cerr << x; } while(0)
 #define WARN(x) do { if (gopt_warnings) { std::cerr << x << std::endl; } } while(0)
 
 // *** List of Function Name Processed (and Their Order)
@@ -114,6 +114,9 @@ struct Result
 
 /// global: hostname read from results
 std::string g_hostname;
+
+/// global: output filename of gnuplot pdf
+std::string g_gnuplot_output;
 
 /// global: the sorted results array
 std::vector<Result> g_results;
@@ -559,7 +562,7 @@ void plot_parallel(std::ostream& os)
 void output_gnuplot(std::ostream& os)
 {
     P("set terminal pdf size 28cm,19.6cm linewidth 2.0 font \"Arial,18\"");
-    P("set output 'plots-" << g_hostname << ".pdf'");
+    P("set output '" << g_gnuplot_output << "'");
     P("");
     P("set pointsize 0.7");
     P("set style line 6 lc rgb '#f0b000'");
@@ -573,7 +576,7 @@ void output_gnuplot(std::ostream& os)
     P("");
     P("set grid xtics ytics");
     P("set xtics 1");
-    P("set xlabel 'Input Size log_2 [B]'");
+    P("set xlabel 'Array Size log_2 [B]'");
     P("set label 1 'pmbw " VERSION "' right at screen 0.98, screen 0.02");
 
     plot_sequential(os);
@@ -584,6 +587,7 @@ void output_gnuplot(std::ostream& os)
 int main(int argc, char* argv[])
 {
     std::string opt_hostname_override;
+    std::string opt_gnuplot_output_override;
 
     if (argc == 1) {
         process_stream(std::cin);
@@ -593,12 +597,17 @@ int main(int argc, char* argv[])
         // *** parse command line options
         int opt;
 
-        while ( (opt = getopt(argc, argv, "vh:")) != -1 )
+        while ( (opt = getopt(argc, argv, "vh:o:")) != -1 )
         {
             switch (opt) {
             case 'h':
                 opt_hostname_override = optarg;
                 ERR("Setting hostname override to '" << opt_hostname_override << "'");
+                break;
+
+            case 'o':
+                opt_gnuplot_output_override = optarg;
+                ERR("Setting gnuplot output override to '" << opt_gnuplot_output_override << "'");
                 break;
 
             case 'v':
@@ -635,6 +644,11 @@ int main(int argc, char* argv[])
 
     if (opt_hostname_override.size())
         g_hostname = opt_hostname_override;
+
+    g_gnuplot_output = "plots-" + g_hostname + ".pdf";
+
+    if (opt_gnuplot_output_override.size())
+        g_gnuplot_output = opt_gnuplot_output_override;
 
     std::sort(g_results.begin(), g_results.end());
 
