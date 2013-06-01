@@ -3089,12 +3089,12 @@ ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ex
 ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
 
-# test support for -march=native (older gcc's don't have it)
+# test support for -march=x86-64 (older gcc's don't have it)
 
 save_cxxflags="$CXXFLAGS"
-CXXFLAGS="$CXXFLAGS -march=native"
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CXX supports -march=native" >&5
-$as_echo_n "checking whether $CXX supports -march=native... " >&6; }
+CXXFLAGS="$CXXFLAGS -march=x86-64"
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $CXX supports -march=x86-64" >&5
+$as_echo_n "checking whether $CXX supports -march=x86-64... " >&6; }
 
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */

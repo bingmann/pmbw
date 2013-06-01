@@ -1,7 +1,12 @@
 /******************************************************************************
  * pmbw.cc
  *
- * Parallel Memory Bandwidth Measurement Tool.
+ * Parallel Memory Bandwidth Measurement / Benchmark Tool.
+ *
+ * The main program creates threads using the pthread library and calls the
+ * assembler functions appropriate for the platform. It also uses CPUID to
+ * detect which routines are applicable. The benchmark results are always
+ * outputted to "stats.txt" which can then be processed using other tools.
  *
  ******************************************************************************
  * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
