@@ -20,11 +20,11 @@ fi
 AC_PROG_CXX
 AC_LANG([C++])
 
-# test support for -march=native (older gcc's don't have it)
+# test support for -march=x86-64 (older gcc's don't have it)
 
 save_cxxflags="$CXXFLAGS"
-CXXFLAGS="$CXXFLAGS -march=native"
-AC_MSG_CHECKING([whether $CXX supports -march=native])
+CXXFLAGS="$CXXFLAGS -march=x86-64"
+AC_MSG_CHECKING([whether $CXX supports -march=x86-64])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
   [AC_MSG_RESULT([yes])],
   [AC_MSG_RESULT([no]); CXXFLAGS="$save_cxxflags"]
