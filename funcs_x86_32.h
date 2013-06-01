@@ -302,7 +302,6 @@ void ScanRead32IndexUnrollLoop(char* memarea, size_t size, size_t repeats)
 
 REGISTER(ScanRead32IndexUnrollLoop, 4, 4);
 
-#if __MMX__
 // ****************************************************************************
 // ----------------------------------------------------------------------------
 // 64-bit Operations
@@ -336,7 +335,7 @@ void ScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         : "eax");
 }
 
-REGISTER(ScanWrite64PtrSimpleLoop, 8, 8);
+REGISTER_CPUFEAT(ScanWrite64PtrSimpleLoop, "mmx", 8, 8);
 
 // 64-bit writer in an unrolled loop (Assembler version)
 void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
@@ -384,7 +383,7 @@ void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         : "eax");
 }
 
-REGISTER(ScanWrite64PtrUnrollLoop, 8, 8);
+REGISTER_CPUFEAT(ScanWrite64PtrUnrollLoop, "mmx", 8, 8);
 
 // 64-bit reader in a simple loop (Assembler version)
 void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
@@ -410,7 +409,7 @@ void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         : "eax");
 }
 
-REGISTER(ScanRead64PtrSimpleLoop, 8, 8);
+REGISTER_CPUFEAT(ScanRead64PtrSimpleLoop, "mmx", 8, 8);
 
 // 64-bit reader in an unrolled loop (Assembler version)
 void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
@@ -455,10 +454,8 @@ void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         : "eax");
 }
 
-REGISTER(ScanRead64PtrUnrollLoop, 8, 8);
-#endif
+REGISTER_CPUFEAT(ScanRead64PtrUnrollLoop, "mmx", 8, 8);
 
-#if __SSE__
 // ****************************************************************************
 // ----------------------------------------------------------------------------
 // 128-bit Operations
@@ -493,7 +490,7 @@ void ScanWrite128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         : "eax");
 }
 
-REGISTER(ScanWrite128PtrSimpleLoop, 16, 16);
+REGISTER_CPUFEAT(ScanWrite128PtrSimpleLoop, "sse", 16, 16);
 
 // 128-bit writer in an unrolled loop (Assembler version)
 void ScanWrite128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
@@ -542,7 +539,7 @@ void ScanWrite128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         : "eax");
 }
 
-REGISTER(ScanWrite128PtrUnrollLoop, 16, 16);
+REGISTER_CPUFEAT(ScanWrite128PtrUnrollLoop, "sse", 16, 16);
 
 // 128-bit reader in a simple loop (Assembler version)
 void ScanRead128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
@@ -568,7 +565,7 @@ void ScanRead128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         : "eax");
 }
 
-REGISTER(ScanRead128PtrSimpleLoop, 8, 8);
+REGISTER_CPUFEAT(ScanRead128PtrSimpleLoop, "sse", 8, 8);
 
 // 128-bit reader in an unrolled loop (Assembler version)
 void ScanRead128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
@@ -613,8 +610,7 @@ void ScanRead128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         : "eax");
 }
 
-REGISTER(ScanRead128PtrUnrollLoop, 8, 8);
-#endif
+REGISTER_CPUFEAT(ScanRead128PtrUnrollLoop, "sse", 8, 8);
 
 // ****************************************************************************
 // ----------------------------------------------------------------------------

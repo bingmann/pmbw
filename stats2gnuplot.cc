@@ -51,6 +51,11 @@ static const char* funclist[] =
     "ScanRead128PtrSimpleLoop",
     "ScanRead128PtrUnrollLoop",
 
+    "ScanWrite256PtrSimpleLoop",
+    "ScanWrite256PtrUnrollLoop",
+    "ScanRead256PtrSimpleLoop",
+    "ScanRead256PtrUnrollLoop",
+
     "PermRead32SimpleLoop",
     "PermRead32UnrollLoop",
     "cPermRead32SimpleLoop",

@@ -56,7 +56,7 @@ bool gopt_testcycle = false;
 
 // error writers
 #define ERR(x)  do { std::cerr << x << std::endl; } while(0)
-#define ERRX(x)  do { std::cerr << x; } while(0)
+#define ERRX(x)  do { (std::cerr << x).flush(); } while(0)
 
 // allocated memory area and size
 char* g_memarea = NULL;
@@ -81,6 +81,9 @@ struct TestFunction
     // function to call
     testfunc_type func;
 
+    // prerequisite CPU feature
+    const char* cpufeat;
+
     // number of bytes read/written per access (for latency calculation)
     unsigned int bytes_per_access;
 
@@ -91,15 +94,18 @@ struct TestFunction
     bool make_permutation;
 
     // constructor which also registers the function
-    TestFunction(const char* n, testfunc_type f,
+    TestFunction(const char* n, testfunc_type f, const char* cf,
                  unsigned int bpa, unsigned int ao, bool mp);
+
+    // test CPU feature support
+    bool is_supported() const;
 };
 
 std::vector<TestFunction*> g_testfunc_list;
 
-TestFunction::TestFunction(const char* n, testfunc_type f,
+TestFunction::TestFunction(const char* n, testfunc_type f,const char* cf,
                            unsigned int bpa, unsigned int ao, bool mp)
-    : name(n), func(f),
+    : name(n), func(f), cpufeat(cf),
       bytes_per_access(bpa), access_offset(ao), make_permutation(mp)
 {
     g_testfunc_list.push_back(this);
@@ -107,11 +113,15 @@ TestFunction::TestFunction(const char* n, testfunc_type f,
 
 #define REGISTER(func, bytes, offset)                           \
     static const class TestFunction* _##func##_register =       \
-        new TestFunction(#func,func,bytes,offset,false);
+        new TestFunction(#func,func,NULL,bytes,offset,false);
+
+#define REGISTER_CPUFEAT(func, cpufeat, bytes, offset)          \
+    static const class TestFunction* _##func##_register =       \
+        new TestFunction(#func,func,cpufeat,bytes,offset,false);
 
 #define REGISTER_PERM(func, bytes)                              \
     static const class TestFunction* _##func##_register =       \
-        new TestFunction(#func,func,bytes,bytes,true);
+        new TestFunction(#func,func,NULL,bytes,bytes,true);
 
 // -----------------------------------------------------------------------------
 // --- Test Functions with Inline Assembler Loops
@@ -123,6 +133,61 @@ TestFunction::TestFunction(const char* n, testfunc_type f,
 #else
   #include "funcs_x86_32.h"
 #endif
+
+// -----------------------------------------------------------------------------
+// --- Test CPU Features via CPUID
+
+//  gcc inline assembly
+static inline void cpuid(int op, int out[4])
+{
+    asm volatile("cpuid"
+                 : "=a" (out[0]), "=b" (out[1]), "=c" (out[2]), "=d" (out[3])
+                 : "a" (op)
+        );
+}
+
+// cpuid op 1 result
+int g_cpuid_op1[4];
+
+// check for MMX instructions
+static bool cpuid_mmx()
+{
+    return (g_cpuid_op1[3] & ((int)1 << 23));
+}
+
+// check for SSE instructions
+static bool cpuid_sse()
+{
+    return (g_cpuid_op1[3] & ((int)1 << 25));
+}
+
+// check for AVX instructions
+static bool cpuid_avx()
+{
+    return (g_cpuid_op1[2] & ((int)1 << 28));
+}
+
+// run CPUID and print output
+static void cpuid_detect()
+{
+    ERRX("CPUID:");
+    cpuid(1, g_cpuid_op1);
+
+    if (cpuid_mmx()) ERRX(" mmx");
+    if (cpuid_sse()) ERRX(" sse");
+    if (cpuid_avx()) ERRX(" avx");
+    ERR("");
+}
+
+// TestFunction feature detection
+bool TestFunction::is_supported() const
+{
+    if (!cpufeat) return true;
+    if (strcmp(cpufeat,"mmx") == 0) return cpuid_mmx();
+    if (strcmp(cpufeat,"sse") == 0) return cpuid_sse();
+    if (strcmp(cpufeat,"avx") == 0) return cpuid_avx();
+    return false;
+}
 
 // -----------------------------------------------------------------------------
 // --- Some Simple Subroutines
@@ -526,6 +591,10 @@ static inline uint64_t round_up_power2(uint64_t v)
 
 int main(int argc, char* argv[])
 {
+    // *** run CPUID
+
+    cpuid_detect();
+
     // *** parse command line options
 
     int opt;
@@ -540,7 +609,10 @@ int main(int argc, char* argv[])
             {
                 std::cout << "Test Function List" << std::endl;
                 for (size_t i = 0; i < g_testfunc_list.size(); ++i)
+                {
+                    if (!g_testfunc_list[i]->is_supported()) continue;
                     std::cout << "  " << g_testfunc_list[i]->name << std::endl;
+                }
                 return 0;
             }
 
@@ -634,7 +706,16 @@ int main(int argc, char* argv[])
 
     for (size_t i = 0; i < g_testfunc_list.size(); ++i)
     {
-        testfunc(g_testfunc_list[i]);
+        TestFunction* tf = g_testfunc_list[i];
+
+        if (!tf->is_supported())
+        {
+            ERR("Skipping " << tf->name << " test "
+                << "due to missing CPU feature '" << tf->cpufeat << "'.");
+            continue;
+        }
+
+        testfunc(tf);
     }
 
     // cleanup
