@@ -45,7 +45,7 @@
 // --- Global Settings and Variables
 
 // filter of functions to run, set by command line
-const char* gopt_funcfilter;
+std::vector<const char*> gopt_funcfilter;
 
 // set default size limit: 4 GiB
 uint64_t gopt_sizelimit = 4*1024*1024*1024LLU;
@@ -53,8 +53,11 @@ uint64_t gopt_sizelimit = 4*1024*1024*1024LLU;
 // set memory limit
 uint64_t gopt_memlimit = 0;
 
-// lower and uuper limit to number of threads
+// lower and upper limit to number of threads
 int gopt_nthreads_min = 0, gopt_nthreads_max = 0;
+
+// quadraticly increasing number of threads
+bool gopt_nthreads_quadratic = false;
 
 // option to test permutation cycle before measurement
 bool gopt_testcycle = false;
@@ -106,14 +109,14 @@ struct TestFunction
     bool is_supported() const;
 };
 
-std::vector<TestFunction*> g_testfunc_list;
+std::vector<TestFunction*> g_testlist;
 
 TestFunction::TestFunction(const char* n, testfunc_type f,const char* cf,
                            unsigned int bpa, unsigned int ao, bool mp)
     : name(n), func(f), cpufeat(cf),
       bytes_per_access(bpa), access_offset(ao), make_permutation(mp)
 {
-    g_testfunc_list.push_back(this);
+    g_testlist.push_back(this);
 }
 
 #define REGISTER(func, bytes, offset)                           \
@@ -229,11 +232,26 @@ struct LCGRandom
     }
 };
 
+// return time stamp for time measurement
 static inline double timestamp()
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return ts.tv_sec + ts.tv_nsec * 1e-9;
+}
+
+// return true if the funcname is selected via command line arguments
+static inline bool match_funcfilter(const char* funcname)
+{
+    if (gopt_funcfilter.size() == 0) return true;
+
+    // iterate over gopt_funcfilter list
+    for (size_t i = 0; i < gopt_funcfilter.size(); ++i) {
+        if (strstr(funcname, gopt_funcfilter[i]) != NULL)
+            return true;
+    }
+
+    return false;
 }
 
 // -----------------------------------------------------------------------------
@@ -552,20 +570,21 @@ void* thread_worker(void* cookie)
 
 void testfunc(const TestFunction* func)
 {
-    if (gopt_funcfilter && strstr(func->name, gopt_funcfilter) == NULL) {
+    if (!match_funcfilter(func->name)) {
         ERR("Skipping " << func->name << " tests");
         return;
     }
 
-    for (int nthreads = 1; nthreads <= g_physical_cpus + 2; ++nthreads)
-    {
-        if ( nthreads < gopt_nthreads_min ||
-             (gopt_nthreads_max && nthreads > gopt_nthreads_max) )
-        {
-            ERR("Skipping " << func->name << " tests with " << nthreads << " threads.");
-            continue;
-        }
+    int nthreads = 1;
 
+    if (gopt_nthreads_min != 0)
+        nthreads = gopt_nthreads_min;
+
+    if (gopt_nthreads_max == 0)
+        gopt_nthreads_max = g_physical_cpus + 2;
+
+    while (1)
+    {
         // globally set test function and thread number
         g_func = func;
         g_nthreads = nthreads;
@@ -582,6 +601,17 @@ void testfunc(const TestFunction* func)
             pthread_join(thr[p], NULL);
 
         pthread_barrier_destroy(&g_barrier);
+
+        // increase thread count
+        if (nthreads >= gopt_nthreads_max) break;
+
+        if (gopt_nthreads_quadratic)
+            nthreads = 2 * nthreads;
+        else
+            nthreads++;
+
+        if (nthreads > gopt_nthreads_max)
+            nthreads = gopt_nthreads_max;
     }
 }
 
@@ -595,6 +625,19 @@ static inline uint64_t round_up_power2(uint64_t v)
     return v + (v == 0);
 }
 
+void print_usage(const char* prog)
+{
+    ERR("Usage: " << prog << " [options]" << std::endl
+        << "Options:" << std::endl
+        << "  -f <match>     Run only benchmarks containing this substring, can be used multile times. Try \"list\"." << std::endl
+        << "  -M <size>      Limit the maximum amount of memory allocated at startup." << std::endl
+        << "  -p <nthrs>     Run benchmarks with at least this thread count." << std::endl
+        << "  -P <nthrs>     Run benchmarks with at most this thread count (overrides detected processor count)." << std::endl
+        << "  -Q             Run benchmarks with quadratically increasing thread count." << std::endl
+        << "  -s <size>      Limit the maximum test array size. Set to 0 for no limit." << std::endl
+        );
+}
+
 int main(int argc, char* argv[])
 {
     // *** run CPUID
@@ -605,37 +648,31 @@ int main(int argc, char* argv[])
 
     int opt;
 
-    while ( (opt = getopt(argc, argv, "f:s:p:P:M:")) != -1 )
+    while ( (opt = getopt(argc, argv, "hf:M:p:P:Qs:")) != -1 )
     {
         switch (opt) {
-        case 'f':
-            gopt_funcfilter = optarg;
+        default:
+        case 'h':
+            print_usage(argv[0]);
+            return EXIT_FAILURE;
 
-            if (strcmp(gopt_funcfilter,"list") == 0)
+        case 'f':
+            if (strcmp(optarg,"list") == 0)
             {
                 std::cout << "Test Function List" << std::endl;
-                for (size_t i = 0; i < g_testfunc_list.size(); ++i)
+                for (size_t i = 0; i < g_testlist.size(); ++i)
                 {
-                    if (!g_testfunc_list[i]->is_supported()) continue;
-                    std::cout << "  " << g_testfunc_list[i]->name << std::endl;
+                    if (!g_testlist[i]->is_supported()) continue;
+                    if (!match_funcfilter(g_testlist[i]->name)) continue;
+
+                    std::cout << "  " << g_testlist[i]->name << std::endl;
                 }
                 return 0;
             }
 
-            ERR("Running only functions containing '" << gopt_funcfilter << "'");
-            break;
+            gopt_funcfilter.push_back(optarg);
 
-        case 's':
-            if (!parse_uint64t(optarg, gopt_sizelimit)) {
-                ERR("Invalid parameter for -s <size limit>.");
-                exit(EXIT_FAILURE);
-            }
-            else if (gopt_sizelimit == 0) {
-                ERR("Running test with array without size limit.");
-            }
-            else {
-                ERR("Running tests with array up to size " << gopt_sizelimit << ".");
-            }
+            ERR("Running only functions containing '" << optarg << "'");
             break;
 
         case 'M':
@@ -651,13 +688,18 @@ int main(int argc, char* argv[])
             }
             break;
 
+        case 'Q':
+            ERR("Running benchmarks with quadratically increasing thread counts.");
+            gopt_nthreads_quadratic = true;
+            break;
+
         case 'p':
             if (!parse_int(optarg, gopt_nthreads_min)) {
                 ERR("Invalid parameter for -p <lower nthreads limit>.");
                 exit(EXIT_FAILURE);
             }
             else {
-                ERR("Running tests with at least " << gopt_nthreads_min << " threads.");
+                ERR("Running benchmarks with at least " << gopt_nthreads_min << " threads.");
             }
             break;
 
@@ -667,13 +709,22 @@ int main(int argc, char* argv[])
                 exit(EXIT_FAILURE);
             }
             else {
-                ERR("Running tests with up to " << gopt_nthreads_max << " threads.");
+                ERR("Running benchmarks with up to " << gopt_nthreads_max << " threads.");
             }
             break;
 
-        default: /* '?' */
-            ERR("Usage: " << argv[0] << " [-f funcfilter] [-s size limit] [-p min threads] [-P max threads]");
-            exit(EXIT_FAILURE);
+        case 's':
+            if (!parse_uint64t(optarg, gopt_sizelimit)) {
+                ERR("Invalid parameter for -s <size limit>.");
+                exit(EXIT_FAILURE);
+            }
+            else if (gopt_sizelimit == 0) {
+                ERR("Running benchmarks with no array size limit.");
+            }
+            else {
+                ERR("Running benchmarks with array size up to " << gopt_sizelimit << ".");
+            }
+            break;
         }
     }
 
@@ -710,9 +761,9 @@ int main(int argc, char* argv[])
 
     unlink("stats.txt");
 
-    for (size_t i = 0; i < g_testfunc_list.size(); ++i)
+    for (size_t i = 0; i < g_testlist.size(); ++i)
     {
-        TestFunction* tf = g_testfunc_list[i];
+        TestFunction* tf = g_testlist[i];
 
         if (!tf->is_supported())
         {
@@ -728,8 +779,8 @@ int main(int argc, char* argv[])
 
     free(g_memarea);
 
-    for (size_t i = 0; i < g_testfunc_list.size(); ++i)
-        delete g_testfunc_list[i];
+    for (size_t i = 0; i < g_testlist.size(); ++i)
+        delete g_testlist[i];
 
     return 0;
 }
