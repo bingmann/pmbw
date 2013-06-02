@@ -640,10 +640,6 @@ void print_usage(const char* prog)
 
 int main(int argc, char* argv[])
 {
-    // *** run CPUID
-
-    cpuid_detect();
-
     // *** parse command line options
 
     int opt;
@@ -659,6 +655,9 @@ int main(int argc, char* argv[])
         case 'f':
             if (strcmp(optarg,"list") == 0)
             {
+                // *** run CPUID
+                cpuid_detect();
+
                 std::cout << "Test Function List" << std::endl;
                 for (size_t i = 0; i < g_testlist.size(); ++i)
                 {
@@ -727,6 +726,9 @@ int main(int argc, char* argv[])
             break;
         }
     }
+
+    // *** run CPUID
+    cpuid_detect();
 
     // *** allocate memory for tests
 
