@@ -12,9 +12,9 @@ important memory bandwidth becomes!
 
 The **`pmbw`** tool contains a set of very basic functions, which are all
 **hand-coded in assembler** to avoid any compiler optimizations. These basic
-functions are modeled after the **basic loops** found in any data processing:
-**sequential scanning** and **random access**. Any application will have a
-memory access pattern that is somewhere between these two extremes.
+functions are modeled after the **basic inner loops** found in any data
+processing: **sequential scanning** and **pure random access**. Any application
+will have a memory access pattern that is somewhere between these two extremes.
 
 Besides these two access patterns, the basic functions benchmark different
 modes of memory access. Depending on the architecture, **16- / 32- / 64- / 128-
@@ -36,7 +36,7 @@ which must be done between RAM accesses for an algorithm to scale well.
 The current source package and some binaries can be downloaded from
 http://panthema.net/2013/pmbw/
 
-We also collect results from various multi-core system on the page above.
+We also collect results from various multi-core systems on the page above.
 
 The program and code is published under the GNU General Public License v3
 (GPL), which can also be found in the file COPYING.
@@ -51,4 +51,4 @@ code. [Zack Smith's bandwidth](http://zsmith.co/bandwidth.html) benchmark is
 limited to sequential bandwidth and was the starting point for designing
 `pmbw`.
 
-Written 2013-06-02 by Timo Bingmann
+Written 2013-07-08 by Timo Bingmann
