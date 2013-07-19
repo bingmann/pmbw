@@ -145,7 +145,17 @@ TestFunction::TestFunction(const char* n, testfunc_type f,const char* cf,
 // -----------------------------------------------------------------------------
 // --- Test CPU Features via CPUID
 
-//  gcc inline assembly
+#if __arm__
+static void cpuid_detect()
+{
+    // replace functions with dummys
+}
+bool TestFunction::is_supported() const
+{
+    return true;
+}
+#else
+//  gcc inline assembly for CPUID instruction
 static inline void cpuid(int op, int out[4])
 {
     asm volatile("cpuid"
@@ -196,6 +206,7 @@ bool TestFunction::is_supported() const
     if (strcmp(cpufeat,"avx") == 0) return cpuid_avx();
     return false;
 }
+#endif
 
 // -----------------------------------------------------------------------------
 // --- Some Simple Subroutines
