@@ -419,7 +419,7 @@ void* thread_master(void* cookie)
     {
         if (*areasize > gopt_sizelimit && gopt_sizelimit != 0) {
             ERR("Skipping " << g_func->name << " test with " << *areasize
-                << " array size due to -s <size limit>.");
+                << " array size due to -s " << gopt_sizelimit << ".");
             continue;
         }
 
