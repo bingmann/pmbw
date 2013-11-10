@@ -1,0 +1,9 @@
+.deps/*
+*.o
+Makefile
+config.log
+config.status
+plots-*.pdf
+stats.txt
+pmbw
+stats2gnuplot

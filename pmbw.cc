@@ -419,7 +419,7 @@ void* thread_master(void* cookie)
     {
         if (*areasize > gopt_sizelimit && gopt_sizelimit != 0) {
             ERR("Skipping " << g_func->name << " test with " << *areasize
-                << " array size due to -s <size limit>.");
+                << " array size due to -s " << gopt_sizelimit << ".");
             continue;
         }
 
@@ -641,11 +641,11 @@ void print_usage(const char* prog)
     ERR("Usage: " << prog << " [options]" << std::endl
         << "Options:" << std::endl
         << "  -f <match>     Run only benchmarks containing this substring, can be used multile times. Try \"list\"." << std::endl
-        << "  -M <size>      Limit the maximum amount of memory allocated at startup." << std::endl
+        << "  -M <size>      Limit the maximum amount of memory allocated at startup [byte]." << std::endl
         << "  -p <nthrs>     Run benchmarks with at least this thread count." << std::endl
         << "  -P <nthrs>     Run benchmarks with at most this thread count (overrides detected processor count)." << std::endl
         << "  -Q             Run benchmarks with quadratically increasing thread count." << std::endl
-        << "  -s <size>      Limit the maximum test array size. Set to 0 for no limit." << std::endl
+        << "  -s <size>      Limit the maximum test array size [byte]. Set to 0 for no limit." << std::endl
         );
 }
 
@@ -746,6 +746,8 @@ int main(int argc, char* argv[])
     size_t physical_mem = sysconf(_SC_PHYS_PAGES) * (size_t)sysconf(_SC_PAGESIZE);
     g_physical_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
+    ERR("Detected " << physical_mem / 1024/1024 << " MiB physical RAM and " << g_physical_cpus << " CPUs. " << std::endl);
+
     // limit allocated memory via command line
     if (gopt_memlimit && gopt_memlimit < physical_mem)
         physical_mem = gopt_memlimit;
@@ -756,8 +758,7 @@ int main(int argc, char* argv[])
     // due to roundup in loop to next cache-line size, add one extra cache-line per thread
     g_memsize += g_physical_cpus * 256;
 
-    ERR("Detected " << physical_mem / 1024/1024 << " MiB physical RAM and " << g_physical_cpus << " CPUs. " << std::endl
-        << "Allocating " << g_memsize / 1024/1024 << " MiB for testing.");
+    ERR("Allocating " << g_memsize / 1024/1024 << " MiB for testing.");
 
     // allocate memory area
     //g_memarea = (char*)malloc(g_memsize);
