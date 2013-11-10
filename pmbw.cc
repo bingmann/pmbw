@@ -641,11 +641,11 @@ void print_usage(const char* prog)
     ERR("Usage: " << prog << " [options]" << std::endl
         << "Options:" << std::endl
         << "  -f <match>     Run only benchmarks containing this substring, can be used multile times. Try \"list\"." << std::endl
-        << "  -M <size>      Limit the maximum amount of memory allocated at startup." << std::endl
+        << "  -M <size>      Limit the maximum amount of memory allocated at startup [byte]." << std::endl
         << "  -p <nthrs>     Run benchmarks with at least this thread count." << std::endl
         << "  -P <nthrs>     Run benchmarks with at most this thread count (overrides detected processor count)." << std::endl
         << "  -Q             Run benchmarks with quadratically increasing thread count." << std::endl
-        << "  -s <size>      Limit the maximum test array size. Set to 0 for no limit." << std::endl
+        << "  -s <size>      Limit the maximum test array size [byte]. Set to 0 for no limit." << std::endl
         );
 }
 
