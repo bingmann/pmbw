@@ -746,6 +746,8 @@ int main(int argc, char* argv[])
     size_t physical_mem = sysconf(_SC_PHYS_PAGES) * (size_t)sysconf(_SC_PAGESIZE);
     g_physical_cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
+    ERR("Detected " << physical_mem / 1024/1024 << " MiB physical RAM and " << g_physical_cpus << " CPUs. " << std::endl);
+
     // limit allocated memory via command line
     if (gopt_memlimit && gopt_memlimit < physical_mem)
         physical_mem = gopt_memlimit;
@@ -756,8 +758,7 @@ int main(int argc, char* argv[])
     // due to roundup in loop to next cache-line size, add one extra cache-line per thread
     g_memsize += g_physical_cpus * 256;
 
-    ERR("Detected " << physical_mem / 1024/1024 << " MiB physical RAM and " << g_physical_cpus << " CPUs. " << std::endl
-        << "Allocating " << g_memsize / 1024/1024 << " MiB for testing.");
+    ERR("Allocating " << g_memsize / 1024/1024 << " MiB for testing.");
 
     // allocate memory area
     //g_memarea = (char*)malloc(g_memsize);
