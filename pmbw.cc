@@ -44,6 +44,12 @@
 // -----------------------------------------------------------------------------
 // --- Global Settings and Variables
 
+// minimum duration of test, if smaller re-run
+double g_min_time = 1.0;
+
+// target average duration of test
+double g_avg_time = 1.5;
+
 // filter of functions to run, set by command line
 std::vector<const char*> gopt_funcfilter;
 
@@ -490,11 +496,11 @@ void* thread_master(void* cookie)
                 runtime = ts2 - ts1;
             }
 
-            if ( runtime < 1.0 )
+            if ( runtime < g_min_time )
             {
                 // test ran for less than one second, repeat test and scale
                 // repeat factor
-                factor = g_thrsize * g_repeats * 3/2 / runtime;
+                factor = g_thrsize * g_repeats * g_avg_time / runtime;
                 ERR("run time = " << runtime << " -> rerunning test with repeat factor=" << factor);
 
                 --round;     // redo this areasize
@@ -502,9 +508,9 @@ void* thread_master(void* cookie)
             else
             {
                 // adapt repeat factor to observed memory bandwidth, so that
-                // next test will take approximately 1.5 sec
+                // next test will take approximately g_avg_time sec
 
-                factor = g_thrsize * g_repeats * 3/2 / runtime;
+                factor = g_thrsize * g_repeats * g_avg_time / runtime;
                 ERR("run time = " << runtime << " -> next test with repeat factor=" << factor);
 
                 std::ostringstream result;
