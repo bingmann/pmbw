@@ -53,8 +53,9 @@ double g_avg_time = 1.5;
 // filter of functions to run, set by command line
 std::vector<const char*> gopt_funcfilter;
 
-// set default size limit: 4 GiB
-uint64_t gopt_sizelimit = 4*1024*1024*1024LLU;
+// set default size limit: 0 -- 4 GiB
+uint64_t gopt_sizelimit_min = 0;
+uint64_t gopt_sizelimit_max = 4*1024*1024*1024LLU;
 
 // set memory limit
 uint64_t gopt_memlimit = 0;
@@ -423,9 +424,14 @@ void* thread_master(void* cookie)
 
     for (const uint64_t* areasize = areasize_list; *areasize; ++areasize)
     {
-        if (*areasize > gopt_sizelimit && gopt_sizelimit != 0) {
+        if (*areasize < gopt_sizelimit_min && gopt_sizelimit_min != 0) {
             ERR("Skipping " << g_func->name << " test with " << *areasize
-                << " array size due to -s " << gopt_sizelimit << ".");
+                << " minimum array size due to -s " << gopt_sizelimit_min << ".");
+            continue;
+        }
+        if (*areasize > gopt_sizelimit_max && gopt_sizelimit_max != 0) {
+            ERR("Skipping " << g_func->name << " test with " << *areasize
+                << " maximum array size due to -S " << gopt_sizelimit_max << ".");
             continue;
         }
 
@@ -651,7 +657,8 @@ void print_usage(const char* prog)
         << "  -p <nthrs>     Run benchmarks with at least this thread count." << std::endl
         << "  -P <nthrs>     Run benchmarks with at most this thread count (overrides detected processor count)." << std::endl
         << "  -Q             Run benchmarks with quadratically increasing thread count." << std::endl
-        << "  -s <size>      Limit the maximum test array size [byte]. Set to 0 for no limit." << std::endl
+        << "  -s <size>      Limit the _minimum_ test array size [byte]. Set to 0 for no limit." << std::endl
+        << "  -S <size>      Limit the _maximum_ test array size [byte]. Set to 0 for no limit." << std::endl
         );
 }
 
@@ -661,7 +668,7 @@ int main(int argc, char* argv[])
 
     int opt;
 
-    while ( (opt = getopt(argc, argv, "hf:M:p:P:Qs:")) != -1 )
+    while ( (opt = getopt(argc, argv, "hf:M:p:P:Qs:S:")) != -1 )
     {
         switch (opt) {
         default:
@@ -730,15 +737,28 @@ int main(int argc, char* argv[])
             break;
 
         case 's':
-            if (!parse_uint64t(optarg, gopt_sizelimit)) {
-                ERR("Invalid parameter for -s <size limit>.");
+            if (!parse_uint64t(optarg, gopt_sizelimit_min)) {
+                ERR("Invalid parameter for -s <minimum size limit>.");
                 exit(EXIT_FAILURE);
             }
-            else if (gopt_sizelimit == 0) {
-                ERR("Running benchmarks with no array size limit.");
+            else if (gopt_sizelimit_min == 0) {
+                ERR("Running benchmarks with no lower array size limit.");
             }
             else {
-                ERR("Running benchmarks with array size up to " << gopt_sizelimit << ".");
+                ERR("Running benchmarks with array size at least " << gopt_sizelimit_min << ".");
+            }
+            break;
+
+        case 'S':
+            if (!parse_uint64t(optarg, gopt_sizelimit_max)) {
+                ERR("Invalid parameter for -S <maximum size limit>.");
+                exit(EXIT_FAILURE);
+            }
+            else if (gopt_sizelimit_max == 0) {
+                ERR("Running benchmarks with no upper array size limit.");
+            }
+            else {
+                ERR("Running benchmarks with array size up to " << gopt_sizelimit_max << ".");
             }
             break;
         }
