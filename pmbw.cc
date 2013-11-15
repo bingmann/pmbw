@@ -30,6 +30,7 @@
 #include <fstream>
 #include <iomanip>
 #include <vector>
+#include <algorithm>
 
 #include <stdlib.h>
 #include <inttypes.h>
@@ -40,6 +41,7 @@
 
 #include <pthread.h>
 #include <malloc.h>
+#include <numa.h>
 
 // -----------------------------------------------------------------------------
 // --- Global Settings and Variables
@@ -73,15 +75,25 @@ bool gopt_testcycle = false;
 #define ERR(x)  do { std::cerr << x << std::endl; } while(0)
 #define ERRX(x)  do { (std::cerr << x).flush(); } while(0)
 
-// allocated memory area and size
-char* g_memarea = NULL;
-size_t g_memsize = 0;
+// allocated memory area, total size and size per NUMA node
+std::vector<char*> g_memarea;
+size_t g_memsize = 0, g_memfree = 0;
+size_t g_memsize_node = 0;
 
 // global test function currently run
 const struct TestFunction* g_func = NULL;
 
 // number of physical cpus detected
 int g_physical_cpus;
+
+// number of NUMA nodes detected
+int g_numa_nodes;
+
+// size of NUMA nodes and free space
+std::vector<uint64_t> g_numa_nodesize, g_numa_nodefree;
+
+// number of NUMA nodes to hop for memory area
+int g_numa_hop = 0;
 
 // -----------------------------------------------------------------------------
 // --- Registry for Memory Testing Functions
@@ -419,6 +431,14 @@ void* thread_master(void* cookie)
     int thread_num = *((int*)cookie);
     delete (int*)cookie;
 
+    // set NUMA node for task and prefered allocation
+    int node_num = thread_num % g_numa_nodes;
+    int node_offset = thread_num / g_numa_nodes;
+    numa_run_on_node(node_num);
+
+    node_num = (node_num + g_numa_hop) % g_numa_nodes; // but maybe access another NUMA node's memory
+    numa_set_preferred(node_num);
+
     // initial repeat factor is just an approximate B/s bandwidth
     uint64_t factor = 1024*1024*1024;
 
@@ -465,6 +485,9 @@ void* thread_master(void* cookie)
             // number of accesses in test
             uint64_t testaccess = testsize * g_repeats / g_func->access_offset;
 
+            // memarea
+            char* memarea = g_memarea[node_num] + node_offset * g_thrsize_spaced;
+
             ERR("Running"
                 << " nthreads=" << g_nthreads
                 << " factor=" << factor
@@ -487,13 +510,13 @@ void* thread_master(void* cookie)
 
                 // create cyclic permutation for each thread
                 if (g_func->make_permutation)
-                    make_cyclic_permutation(thread_num, g_memarea + thread_num * g_thrsize_spaced, g_thrsize);
+                    make_cyclic_permutation(thread_num, memarea, g_thrsize);
 
                 // *** Barrier ****
                 pthread_barrier_wait(&g_barrier);
                 double ts1 = timestamp();
 
-                g_func->func(g_memarea + thread_num * g_thrsize_spaced, g_thrsize, g_repeats);
+                g_func->func(memarea, g_thrsize, g_repeats);
 
                 // *** Barrier ****
                 pthread_barrier_wait(&g_barrier);
@@ -536,6 +559,7 @@ void* thread_master(void* cookie)
                 result << "version=" << PACKAGE_VERSION << '\t'
                        << "funcname=" << g_func->name << '\t'
                        << "nthreads=" << g_nthreads << '\t'
+                       << "numahop=" << g_numa_hop << '\t'
                        << "areasize=" << *areasize << '\t'
                        << "threadsize=" << g_thrsize << '\t'
                        << "testsize=" << testsize << '\t'
@@ -568,6 +592,14 @@ void* thread_worker(void* cookie)
     int thread_num = *((int*)cookie);
     delete (int*)cookie;
 
+    // set NUMA node for task and prefered allocation
+    int node_num = thread_num % g_numa_nodes;
+    int node_offset = thread_num / g_numa_nodes;
+    numa_run_on_node(node_num);
+
+    node_num = (node_num + g_numa_hop) % g_numa_nodes; // but maybe access another NUMA node's memory
+    numa_set_preferred(node_num);
+
     while (1)
     {
         // *** Barrier ****
@@ -575,14 +607,17 @@ void* thread_worker(void* cookie)
 
         if (g_done) break;
 
+        // memarea
+        char* memarea = g_memarea[node_num] + node_offset * g_thrsize_spaced;
+
         // create cyclic permutation for each thread
         if (g_func->make_permutation)
-            make_cyclic_permutation(thread_num, g_memarea + thread_num * g_thrsize_spaced, g_thrsize);
+            make_cyclic_permutation(thread_num, memarea, g_thrsize);
 
         // *** Barrier ****
         pthread_barrier_wait(&g_barrier);
 
-        g_func->func(g_memarea + thread_num * g_thrsize_spaced, g_thrsize, g_repeats);
+        g_func->func(memarea, g_thrsize, g_repeats);
 
         // *** Barrier ****
         pthread_barrier_wait(&g_barrier);
@@ -769,33 +804,64 @@ int main(int argc, char* argv[])
 
     // *** allocate memory for tests
 
-    size_t physical_mem = sysconf(_SC_PHYS_PAGES) * (size_t)sysconf(_SC_PAGESIZE);
-    g_physical_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+    if (numa_available() != 0) {
+        ERR("NUMA not available!");
+        return 0;
+    }
 
-    ERR("Detected " << physical_mem / 1024/1024 << " MiB physical RAM and " << g_physical_cpus << " CPUs. " << std::endl);
+    numa_exit_on_error = 1;
+
+    g_physical_cpus = numa_num_configured_cpus();
+    g_numa_nodes = numa_num_configured_nodes();
+
+    ERR("Detected " << g_numa_nodes << " NUMA nodes with and " << g_physical_cpus << " CPUs. ");
+
+    // detect active NUMA nodes sizes
+    for (int nn = 0; nn < g_numa_nodes; ++nn)
+    {
+        long long freep;
+
+        g_numa_nodesize.push_back(numa_node_size64(nn, &freep));
+        g_numa_nodefree.push_back(freep);
+
+        ERR(nn << " [ " << g_numa_nodefree.back() / 1024/1024 <<
+            " / " << g_numa_nodesize.back() / 1024/1024 << " MiB = " <<
+            (100.0 * g_numa_nodefree.back() / g_numa_nodesize.back()) << "% ]");
+
+        g_memsize += g_numa_nodesize.back();
+        g_memfree += g_numa_nodefree.back();
+    }
+
+    ERR("total [ " << g_memfree / 1024/1024 <<
+        " / " << g_memsize / 1024/1024 << " MiB = " <<
+        (100.0 * g_memfree / g_memsize) << "% ]");
+
+    // find maximum allocation over all NUMA nodes
+    g_memsize_node = *std::min_element(g_numa_nodefree.begin(), g_numa_nodefree.end());
 
     // limit allocated memory via command line
-    if (gopt_memlimit && gopt_memlimit < physical_mem)
-        physical_mem = gopt_memlimit;
+    if (gopt_memlimit && gopt_memlimit < g_memsize_node)
+        g_memsize_node = gopt_memlimit;
 
-    // round down memory to largest power of two, still fitting in physical RAM
-    g_memsize = round_up_power2(physical_mem) / 2;
-
-    // due to roundup in loop to next cache-line size, add one extra cache-line per thread
-    g_memsize += g_physical_cpus * 256;
-
-    ERR("Allocating " << g_memsize / 1024/1024 << " MiB for testing.");
-
-    // allocate memory area
-    //g_memarea = (char*)malloc(g_memsize);
-
-    if (posix_memalign((void**)&g_memarea, 32, g_memsize) != 0) {
-        ERR("Error allocating memory.");
-        return -1;
+    // allocate memory area on each NUMA node
+    ERR("Allocating " << g_memsize_node / 1024/1024 << " MiB on each NUMA node for testing.");
+    for (int nn = 0; nn < g_numa_nodes; ++nn)
+    {
+        void* mem = numa_alloc_onnode(g_memsize_node, nn);
+        g_memarea.push_back( (char*)mem );
     }
 
     // fill memory with junk, but this allocates physical memory
-    memset(g_memarea, 1, g_memsize);
+    ERR("Filling " << g_memsize_node / 1024/1024 << " MiB on each NUMA node.");
+    for (int nn = 0; nn < g_numa_nodes; ++nn)
+    {
+        double ts1 = timestamp();
+        ERRX("node " << nn << ": ");
+        memset(g_memarea[nn], 1, g_memsize_node);
+        double ts2 = timestamp();
+        ERRX(std::setprecision(2) << (ts2 - ts1) << "s, ");
+    }
+    ERR("done");
 
     // *** perform memory tests
 
@@ -807,17 +873,22 @@ int main(int argc, char* argv[])
 
         if (!tf->is_supported())
         {
-            ERR("Skipping " << tf->name << " test "
-                << "due to missing CPU feature '" << tf->cpufeat << "'.");
+            ERR("Skipping " << tf->name << " test " <<
+                "due to missing CPU feature '" << tf->cpufeat << "'.");
             continue;
         }
 
-        testfunc(tf);
+        for (int hop = 0; hop < g_numa_nodes; ++hop)
+        {
+            g_numa_hop = hop;
+            testfunc(tf);
+        }
     }
 
     // cleanup
 
-    free(g_memarea);
+    for (int nn = 0; nn < g_numa_nodes; ++nn)
+        numa_free(g_memarea[nn], g_memsize_node);
 
     for (size_t i = 0; i < g_testlist.size(); ++i)
         delete g_testlist[i];

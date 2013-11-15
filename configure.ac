@@ -42,6 +42,11 @@ AC_CHECK_LIB(rt, clock_gettime,
   [AC_MSG_ERROR(rt library needed!)]
 )
 
+AC_CHECK_LIB(numa, numa_available,
+  [LIBS="$LIBS -lnuma"],
+  [AC_MSG_ERROR(numa library needed!)]
+)
+
 # transform Makefiles
 
 AC_OUTPUT([Makefile])
