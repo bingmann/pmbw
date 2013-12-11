@@ -41,6 +41,10 @@
 #include <pthread.h>
 #include <malloc.h>
 
+#if ON_WINDOWS
+#include <windows.h>
+#endif
+
 // -----------------------------------------------------------------------------
 // --- Global Settings and Variables
 
@@ -530,7 +534,12 @@ void* thread_master(void* cookie)
                 result << "datetime=" << datetime << '\t';
 
                 char hostname[256];
+#if !ON_WINDOWS
                 gethostname(hostname, sizeof(hostname));
+#else
+                DWORD hostnameSize = sizeof(hostname);
+                GetComputerName(hostname, &hostnameSize);
+#endif
                 result << "host=" << hostname << '\t';
 
                 result << "version=" << PACKAGE_VERSION << '\t'
@@ -769,8 +778,25 @@ int main(int argc, char* argv[])
 
     // *** allocate memory for tests
 
+#if !ON_WINDOWS
+
     size_t physical_mem = sysconf(_SC_PHYS_PAGES) * (size_t)sysconf(_SC_PAGESIZE);
     g_physical_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+
+#else
+
+    MEMORYSTATUSEX memstx;
+    memstx.dwLength = sizeof(memstx);
+    GlobalMemoryStatusEx(&memstx);
+
+    size_t physical_mem = memstx.ullTotalPhys;
+
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo( &sysinfo );
+
+    g_physical_cpus = sysinfo.dwNumberOfProcessors;
+
+#endif
 
     ERR("Detected " << physical_mem / 1024/1024 << " MiB physical RAM and " << g_physical_cpus << " CPUs. " << std::endl);
 
@@ -787,12 +813,19 @@ int main(int argc, char* argv[])
     ERR("Allocating " << g_memsize / 1024/1024 << " MiB for testing.");
 
     // allocate memory area
-    //g_memarea = (char*)malloc(g_memsize);
+
+#if !ON_WINDOWS
 
     if (posix_memalign((void**)&g_memarea, 32, g_memsize) != 0) {
         ERR("Error allocating memory.");
         return -1;
     }
+
+#else
+
+    g_memarea = (char*)malloc(g_memsize);
+
+#endif
 
     // fill memory with junk, but this allocates physical memory
     memset(g_memarea, 1, g_memsize);
