@@ -63,6 +63,10 @@ if [ ! "$ON_WINDOWS" ]; then
 
 fi
 
+HAVE_POSIX_MEMALIGN=0
+AC_CHECK_LIB(c, posix_memalign, [HAVE_POSIX_MEMALIGN=1])
+AC_DEFINE_UNQUOTED(HAVE_POSIX_MEMALIGN, $HAVE_POSIX_MEMALIGN)
+
 # transform Makefiles
 
 AC_OUTPUT([Makefile])

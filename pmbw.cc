@@ -814,7 +814,7 @@ int main(int argc, char* argv[])
 
     // allocate memory area
 
-#if !ON_WINDOWS
+#if HAVE_POSIX_MEMALIGN
 
     if (posix_memalign((void**)&g_memarea, 32, g_memsize) != 0) {
         ERR("Error allocating memory.");
