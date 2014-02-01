@@ -432,7 +432,7 @@ void plot_sequential(std::ostream& os)
     plot_funcname_iteration(os, filter_sequential, plot_data_bandwidth);
 
     P("set key top left");
-    P("set title '" << g_hostname << " - One Thread Memory Latency'");
+    P("set title '" << g_hostname << " - One Thread Memory Latency (Access Time)'");
     P("set ylabel 'Access Time [ns]'");
     plot_funcname_iteration(os, filter_sequential, plot_data_latency);
 
@@ -557,23 +557,23 @@ void plot_parallel_speedup_bandwidth(std::ostream& os, const std::string& funcna
 void plot_parallel_funcname(std::ostream& os, const std::string& funcname)
 {
     P("set key top right");
-    P("set title '" << g_hostname << " - Memory Bandwidth - " << funcname);
+    P("set title '" << g_hostname << " - Parallel Memory Bandwidth - " << funcname);
     P("set ylabel 'Bandwidth [GiB/s]'");
     plot_parallel_iteration(os, funcname, plot_data_bandwidth);
 
     P("set key top left");
-    P("set title '" << g_hostname << " - Memory Latency - " << funcname);
+    P("set title '" << g_hostname << " - Parallel Memory Access Time - " << funcname);
     P("set ylabel 'Access Time [ns]'");
     plot_parallel_iteration(os, funcname, plot_data_latency);
 
     P("set key top right");
-    P("set title '" << g_hostname << " - Speedup of Memory Bandwidth - " << funcname);
+    P("set title '" << g_hostname << " - Speedup of Parallel Memory Bandwidth - " << funcname);
     P("set ylabel 'Bandwidth Speedup [1]'");
     double avgspeedup;
     plot_parallel_speedup_bandwidth(os, funcname, avgspeedup);
 
     // replot last plot with other yrange scale
-    P("set title '" << g_hostname << " - Speedup of Memory Bandwidth (enlarged) - " << funcname);
+    P("set title '" << g_hostname << " - Speedup of Parallel Memory Bandwidth (enlarged) - " << funcname);
     P("set yrange [*:" << avgspeedup << "]");
     plot_parallel_speedup_bandwidth(os, funcname, avgspeedup);
 
