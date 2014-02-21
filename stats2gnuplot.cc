@@ -592,7 +592,7 @@ void plot_parallel(std::ostream& os)
 
 void output_gnuplot(std::ostream& os)
 {
-    P("set terminal pdf size 28cm,19.6cm linewidth 2.0 font \"Arial,18\"");
+    P("set terminal pdf size 28cm,19.6cm linewidth 2.0 font \"Arial,18\" enhanced");
     P("set output '" << g_gnuplot_output << "'");
     P("");
     P("set pointsize 0.7");
