@@ -120,7 +120,8 @@ struct TestFunction
 
     // constructor which also registers the function
     TestFunction(const char* n, testfunc_type f, const char* cf,
-                 unsigned int bpa, unsigned int ao, bool mp);
+                 unsigned int bpa, unsigned int ao, unsigned int unr,
+                 bool mp);
 
     // test CPU feature support
     bool is_supported() const;
@@ -128,26 +129,27 @@ struct TestFunction
 
 std::vector<TestFunction*> g_testlist;
 
-TestFunction::TestFunction(const char* n, testfunc_type f,const char* cf,
-                           unsigned int bpa, unsigned int ao, bool mp)
+TestFunction::TestFunction(const char* n, testfunc_type f, const char* cf,
+                           unsigned int bpa, unsigned int ao, unsigned int unr,
+                           bool mp)
     : name(n), func(f), cpufeat(cf),
-      bytes_per_access(bpa), access_offset(ao), unroll_factor(16),
+      bytes_per_access(bpa), access_offset(ao), unroll_factor(unr),
       make_permutation(mp)
 {
     g_testlist.push_back(this);
 }
 
-#define REGISTER(func, bytes, offset)                           \
+#define REGISTER(func, bytes, offset, unroll)                   \
     static const class TestFunction* _##func##_register =       \
-        new TestFunction(#func,func,NULL,bytes,offset,false);
+        new TestFunction(#func,func,NULL,bytes,offset,unroll,false);
 
-#define REGISTER_CPUFEAT(func, cpufeat, bytes, offset)          \
+#define REGISTER_CPUFEAT(func, cpufeat, bytes, offset, unroll)  \
     static const class TestFunction* _##func##_register =       \
-        new TestFunction(#func,func,cpufeat,bytes,offset,false);
+        new TestFunction(#func,func,cpufeat,bytes,offset,unroll,false);
 
 #define REGISTER_PERM(func, bytes)                              \
     static const class TestFunction* _##func##_register =       \
-        new TestFunction(#func,func,NULL,bytes,bytes,true);
+        new TestFunction(#func,func,NULL,bytes,bytes,1,true);
 
 // -----------------------------------------------------------------------------
 // --- Test Functions with Inline Assembler Loops
