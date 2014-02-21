@@ -565,7 +565,7 @@ void ScanRead128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         : "eax");
 }
 
-REGISTER_CPUFEAT(ScanRead128PtrSimpleLoop, "sse", 8, 8);
+REGISTER_CPUFEAT(ScanRead128PtrSimpleLoop, "sse", 16, 16);
 
 // 128-bit reader in an unrolled loop (Assembler version)
 void ScanRead128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
@@ -610,7 +610,7 @@ void ScanRead128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         : "eax");
 }
 
-REGISTER_CPUFEAT(ScanRead128PtrUnrollLoop, "sse", 8, 8);
+REGISTER_CPUFEAT(ScanRead128PtrUnrollLoop, "sse", 16, 16);
 
 // ****************************************************************************
 // ----------------------------------------------------------------------------
@@ -755,7 +755,7 @@ void cPermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
     while (--repeats != 0);
 }
 
-//REGISTER_PERM(cPermRead32SimpleLoop, 8);
+//REGISTER_PERM(cPermRead32SimpleLoop, 4);
 
 // follow 32-bit permutation in a simple loop (Assembler version)
 void PermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
@@ -775,7 +775,7 @@ void PermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
         : "eax");
 }
 
-REGISTER_PERM(PermRead32SimpleLoop, 8);
+REGISTER_PERM(PermRead32SimpleLoop, 4);
 
 // follow 32-bit permutation in an unrolled loop (Assembler version)
 void PermRead32UnrollLoop(char* memarea, size_t, size_t repeats)
@@ -813,6 +813,6 @@ void PermRead32UnrollLoop(char* memarea, size_t, size_t repeats)
         : "eax");
 }
 
-REGISTER_PERM(PermRead32UnrollLoop, 8);
+REGISTER_PERM(PermRead32UnrollLoop, 4);
 
 // -----------------------------------------------------------------------------
