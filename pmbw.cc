@@ -112,6 +112,9 @@ struct TestFunction
     // bytes skipped foward to next access point (including bytes_per_access)
     unsigned int access_offset;
 
+    // number of accesses before and after
+    unsigned int unroll_factor;
+
     // fill the area with a permutation before calling the func
     bool make_permutation;
 
@@ -128,7 +131,8 @@ std::vector<TestFunction*> g_testlist;
 TestFunction::TestFunction(const char* n, testfunc_type f,const char* cf,
                            unsigned int bpa, unsigned int ao, bool mp)
     : name(n), func(f), cpufeat(cf),
-      bytes_per_access(bpa), access_offset(ao), make_permutation(mp)
+      bytes_per_access(bpa), access_offset(ao), unroll_factor(16),
+      make_permutation(mp)
 {
     g_testlist.push_back(this);
 }
@@ -447,9 +451,10 @@ void* thread_master(void* cookie)
             // divide area by thread number
             g_thrsize = *areasize / g_nthreads;
 
-            // unrolled tests do 16 accesses without loop check, thus align
-            // upward to next multiple of 16*size (e.g. 128 bytes for 64-bit)
-            uint64_t unrollsize = 16 * g_func->bytes_per_access;
+            // unrolled tests do up to 16 accesses without loop check, thus align
+            // upward to next multiple of unroll_factor*size (e.g. 128 bytes for
+            // 16-times unrolled 64-bit access)
+            uint64_t unrollsize = g_func->unroll_factor * g_func->bytes_per_access;
             g_thrsize = ((g_thrsize + unrollsize - 1) / unrollsize) * unrollsize;
 
             // total size tested
