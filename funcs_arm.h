@@ -51,7 +51,7 @@ void cScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
     while (--repeats != 0);
 }
 
-//REGISTER(cScanWrite32PtrSimpleLoop, 4, 4);
+//REGISTER(cScanWrite32PtrSimpleLoop, 4, 4, 1);
 
 // 32-bit writer in a simple loop (Assembler version)
 void ScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
@@ -73,7 +73,7 @@ void ScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "memory");
 }
 
-REGISTER(ScanWrite32PtrSimpleLoop, 4, 4);
+REGISTER(ScanWrite32PtrSimpleLoop, 4, 4, 1);
 
 // 32-bit writer in an unrolled loop (Assembler version)
 void ScanWrite32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
@@ -115,7 +115,7 @@ void ScanWrite32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "memory");
 }
 
-REGISTER(ScanWrite32PtrUnrollLoop, 4, 4);
+REGISTER(ScanWrite32PtrUnrollLoop, 4, 4, 16);
 
 // 32-bit writer with multistore operations (Assembler version)
 void ScanWrite32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
@@ -145,7 +145,7 @@ void ScanWrite32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "memory");
 }
 
-REGISTER(ScanWrite32PtrMultiLoop, 4, 4);
+REGISTER(ScanWrite32PtrMultiLoop, 4, 4, 8);
 
 // 32-bit read in a simple loop (Assembler version)
 void ScanRead32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
@@ -165,7 +165,7 @@ void ScanRead32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "r0");
 }
 
-REGISTER(ScanRead32PtrSimpleLoop, 4, 4);
+REGISTER(ScanRead32PtrSimpleLoop, 4, 4, 1);
 
 // 32-bit reader in an unrolled loop (Assembler version)
 void ScanRead32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
@@ -205,7 +205,7 @@ void ScanRead32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "r0");
 }
 
-REGISTER(ScanRead32PtrUnrollLoop, 4, 4);
+REGISTER(ScanRead32PtrUnrollLoop, 4, 4, 16);
 
 // 32-bit reader with multistore operations (Assembler version)
 void ScanRead32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
@@ -225,7 +225,7 @@ void ScanRead32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
 }
 
-REGISTER(ScanRead32PtrMultiLoop, 4, 4);
+REGISTER(ScanRead32PtrMultiLoop, 4, 4, 1);
 
 // -----------------------------------------------------------------------------
 
@@ -243,7 +243,7 @@ void cScanWrite32IndexSimpleLoop(char* _memarea, size_t _size, size_t repeats)
     while (--repeats != 0);
 }
 
-//REGISTER(cScanWrite32IndexSimpleLoop, 4, 4);
+//REGISTER(cScanWrite32IndexSimpleLoop, 4, 4, 1);
 
 // 32-bit writer in an indexed loop (Assembler version)
 void ScanWrite32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
@@ -266,7 +266,7 @@ void ScanWrite32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "memory");
 }
 
-REGISTER(ScanWrite32IndexSimpleLoop, 4, 4);
+REGISTER(ScanWrite32IndexSimpleLoop, 4, 4, 1);
 
 // 32-bit reader in an indexed loop (Assembler version)
 void ScanRead32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
@@ -287,7 +287,7 @@ void ScanRead32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "r0");
 }
 
-REGISTER(ScanRead32IndexSimpleLoop, 4, 4);
+REGISTER(ScanRead32IndexSimpleLoop, 4, 4, 1);
 
 // ****************************************************************************
 // ----------------------------------------------------------------------------
@@ -315,7 +315,7 @@ void cScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
     while (--repeats != 0);
 }
 
-//REGISTER(cScanWrite64PtrSimpleLoop, 8, 8);
+//REGISTER(cScanWrite64PtrSimpleLoop, 8, 8, 1);
 
 // 64-bit writer in a simple loop (Assembler version)
 void ScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
@@ -339,7 +339,7 @@ void ScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "r4", "r5", "memory");
 }
 
-REGISTER(ScanWrite64PtrSimpleLoop, 8, 8);
+REGISTER(ScanWrite64PtrSimpleLoop, 8, 8, 1);
 
 // 64-bit writer in an unrolled loop (Assembler version)
 void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
@@ -383,7 +383,7 @@ void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "r4", "r5");
 }
 
-REGISTER(ScanWrite64PtrUnrollLoop, 8, 8);
+REGISTER(ScanWrite64PtrUnrollLoop, 8, 8, 16);
 
 // 64-bit reader in a simple loop (Assembler version)
 void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
@@ -403,7 +403,7 @@ void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "r4", "r5");
 }
 
-REGISTER(ScanRead64PtrSimpleLoop, 8, 8);
+REGISTER(ScanRead64PtrSimpleLoop, 8, 8, 1);
 
 // 64-bit reader in an unrolled loop (Assembler version)
 void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
@@ -443,7 +443,7 @@ void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         : "ip", "r4", "r5");
 }
 
-REGISTER(ScanRead64PtrUnrollLoop, 8, 8);
+REGISTER(ScanRead64PtrUnrollLoop, 8, 8, 16);
 
 // ****************************************************************************
 // ----------------------------------------------------------------------------
