@@ -87,6 +87,9 @@ const struct TestFunction* g_func = NULL;
 // number of physical cpus detected
 int g_physical_cpus;
 
+// hostname
+char g_hostname[256];
+
 // -----------------------------------------------------------------------------
 // --- Registry for Memory Testing Functions
 
@@ -531,18 +534,9 @@ void* thread_master(void* cookie)
                 time_t tnow = time(NULL);
 
                 strftime(datetime, sizeof(datetime), "%Y-%m-%d %H:%M:%S", localtime(&tnow));
-                result << "datetime=" << datetime << '\t';
-
-                char hostname[256];
-#if !ON_WINDOWS
-                gethostname(hostname, sizeof(hostname));
-#else
-                DWORD hostnameSize = sizeof(hostname);
-                GetComputerName(hostname, &hostnameSize);
-#endif
-                result << "host=" << hostname << '\t';
-
-                result << "version=" << PACKAGE_VERSION << '\t'
+                result << "datetime=" << datetime << '\t'
+                       << "host=" << g_hostname << '\t'
+                       << "version=" << PACKAGE_VERSION << '\t'
                        << "funcname=" << g_func->name << '\t'
                        << "nthreads=" << g_nthreads << '\t'
                        << "areasize=" << *areasize << '\t'
@@ -772,6 +766,13 @@ int main(int argc, char* argv[])
             break;
         }
     }
+
+#if !ON_WINDOWS
+    gethostname(g_hostname, sizeof(g_hostname));
+#else
+    DWORD hostnameSize = sizeof(g_hostname);
+    GetComputerName(g_hostname, &hostnameSize);
+#endif
 
     // *** run CPUID
     cpuid_detect();
