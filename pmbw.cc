@@ -447,7 +447,7 @@ void* thread_master(void* cookie)
             // unrolled tests do 16 accesses without loop check, thus align
             // upward to next multiple of 16*size (e.g. 128 bytes for 64-bit)
             uint64_t unrollsize = 16 * g_func->bytes_per_access;
-            g_thrsize = ((g_thrsize + unrollsize) / unrollsize) * unrollsize;
+            g_thrsize = ((g_thrsize + unrollsize - 1) / unrollsize) * unrollsize;
 
             // total size tested
             uint64_t testsize = g_thrsize * g_nthreads;
