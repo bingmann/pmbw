@@ -140,15 +140,15 @@ TestFunction::TestFunction(const char* n, testfunc_type f, const char* cf,
 }
 
 #define REGISTER(func, bytes, offset, unroll)                   \
-    static const class TestFunction* _##func##_register =       \
+    static const struct TestFunction* _##func##_register =       \
         new TestFunction(#func,func,NULL,bytes,offset,unroll,false);
 
 #define REGISTER_CPUFEAT(func, cpufeat, bytes, offset, unroll)  \
-    static const class TestFunction* _##func##_register =       \
+    static const struct TestFunction* _##func##_register =       \
         new TestFunction(#func,func,cpufeat,bytes,offset,unroll,false);
 
 #define REGISTER_PERM(func, bytes)                              \
-    static const class TestFunction* _##func##_register =       \
+    static const struct TestFunction* _##func##_register =       \
         new TestFunction(#func,func,NULL,bytes,bytes,1,true);
 
 // -----------------------------------------------------------------------------
