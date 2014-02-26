@@ -174,7 +174,7 @@ REGISTER(ScanRead32PtrUnrollLoop, 4, 4, 16);
 void cScanWrite32IndexSimpleLoop(char* _memarea, size_t _size, size_t repeats)
 {
     uint32_t* memarea = (uint32_t*)_memarea;
-    uint32_t size = _size / sizeof(uint32_t);
+    size_t size = _size / sizeof(uint32_t);
     uint32_t value = 0xC0FFEEEE;
 
     do {
