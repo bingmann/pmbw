@@ -272,7 +272,12 @@ struct LCGRandom
 static inline double timestamp()
 {
     struct timespec ts;
+#ifdef __bgq__
+    // CLOCK_MONOTONIC is not supported on BG/Q
+    clock_gettime(CLOCK_REALTIME, &ts);
+#else
     clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
     return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
