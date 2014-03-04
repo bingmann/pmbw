@@ -69,7 +69,7 @@ void ScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "rax", "rcx", "memory");
+        : "rax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanWrite64PtrSimpleLoop, 8, 8, 1);
@@ -106,7 +106,7 @@ void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "rax", "rcx", "memory");
+        : "rax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanWrite64PtrUnrollLoop, 8, 8, 16);
@@ -127,7 +127,7 @@ void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "rax", "rcx");
+        : "rax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanRead64PtrSimpleLoop, 8, 8, 1);
@@ -163,7 +163,7 @@ void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "rax", "rcx");
+        : "rax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanRead64PtrUnrollLoop, 8, 8, 16);
@@ -203,7 +203,7 @@ void ScanWrite64IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
-        : "rax", "rcx", "memory");
+        : "rax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanWrite64IndexSimpleLoop, 8, 8, 1);
@@ -240,7 +240,7 @@ void ScanWrite64IndexUnrollLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
-        : "rax", "rcx", "memory");
+        : "rax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanWrite64IndexUnrollLoop, 8, 8, 16);
@@ -261,7 +261,7 @@ void ScanRead64IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
-        : "rax", "rcx");
+        : "rax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanRead64IndexSimpleLoop, 8, 8, 1);
@@ -297,7 +297,7 @@ void ScanRead64IndexUnrollLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
-        : "rax", "rcx");
+        : "rax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanRead64IndexUnrollLoop, 8, 8, 16);
@@ -347,7 +347,7 @@ void SkipWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "g" (memarea), [size] "g" (size), [repeats] "r" (repeats)
-        : "rax", "rcx", "rsi", "rdi");
+        : "rax", "rcx", "rsi", "rdi", "cc", "memory");
 }
 
 REGISTER(SkipWrite64PtrSimpleLoop, 8, 8, 1);
@@ -401,7 +401,7 @@ void ScanWrite128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "rax", "xmm0", "xmm1", "memory");
+        : "rax", "xmm0", "xmm1", "cc", "memory");
 }
 
 REGISTER_CPUFEAT(ScanWrite128PtrSimpleLoop, "sse", 16, 16, 1);
@@ -441,7 +441,7 @@ void ScanWrite128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "rax", "xmm0", "xmm1", "memory");
+        : "rax", "xmm0", "xmm1", "cc", "memory");
 }
 
 REGISTER_CPUFEAT(ScanWrite128PtrUnrollLoop, "sse", 16, 16, 16);
@@ -462,7 +462,7 @@ void ScanRead128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "rax", "xmm0");
+        : "rax", "xmm0", "cc", "memory");
 }
 
 REGISTER_CPUFEAT(ScanRead128PtrSimpleLoop, "sse", 16, 16, 1);
@@ -498,7 +498,7 @@ void ScanRead128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "rax", "xmm0");
+        : "rax", "xmm0", "cc", "memory");
 }
 
 REGISTER_CPUFEAT(ScanRead128PtrUnrollLoop, "sse", 16, 16, 16);
@@ -529,7 +529,7 @@ void ScanWrite256PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats),
           [value] "m" (value)
-        : "rax", "xmm0", "memory");
+        : "rax", "xmm0", "cc", "memory");
 }
 
 REGISTER_CPUFEAT(ScanWrite256PtrSimpleLoop, "avx", 32, 32, 1);
@@ -569,7 +569,7 @@ void ScanWrite256PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats),
           [value] "m" (value)
-        : "rax", "xmm0", "memory");
+        : "rax", "xmm0", "cc", "memory");
 }
 
 REGISTER_CPUFEAT(ScanWrite256PtrUnrollLoop, "avx", 32, 32, 16);
@@ -590,7 +590,7 @@ void ScanRead256PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "rax", "xmm0");
+        : "rax", "xmm0", "cc", "memory");
 }
 
 REGISTER_CPUFEAT(ScanRead256PtrSimpleLoop, "avx", 32, 32, 1);
@@ -626,7 +626,7 @@ void ScanRead256PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "rax", "xmm0");
+        : "rax", "xmm0", "cc", "memory");
 }
 
 REGISTER_CPUFEAT(ScanRead256PtrUnrollLoop, "avx", 32, 32, 16);
@@ -654,7 +654,7 @@ void ScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "eax", "rcx", "memory");
+        : "eax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanWrite32PtrSimpleLoop, 4, 4, 1);
@@ -691,7 +691,7 @@ void ScanWrite32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "eax", "rcx", "memory");
+        : "eax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanWrite32PtrUnrollLoop, 4, 4, 16);
@@ -712,7 +712,7 @@ void ScanRead32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "eax", "rcx");
+        : "eax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanRead32PtrSimpleLoop, 4, 4, 1);
@@ -748,7 +748,7 @@ void ScanRead32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "eax", "rcx");
+        : "eax", "rcx", "cc", "memory");
 }
 
 REGISTER(ScanRead32PtrUnrollLoop, 4, 4, 16);
@@ -791,7 +791,7 @@ void PermRead64SimpleLoop(char* memarea, size_t, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [repeats] "r" (repeats)
-        : "rax");
+        : "rax", "cc", "memory");
 }
 
 REGISTER_PERM(PermRead64SimpleLoop, 8);
@@ -829,7 +829,7 @@ void PermRead64UnrollLoop(char* memarea, size_t, size_t repeats)
         "jnz    1b \n"
         :
         : [memarea] "r" (memarea), [repeats] "r" (repeats)
-        : "rax");
+        : "rax", "cc", "memory");
 }
 
 REGISTER_PERM(PermRead64UnrollLoop, 8);

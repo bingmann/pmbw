@@ -70,7 +70,7 @@ void ScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "memory");
+        : "ip", "cc", "memory");
 }
 
 REGISTER(ScanWrite32PtrSimpleLoop, 4, 4, 1);
@@ -112,7 +112,7 @@ void ScanWrite32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "memory");
+        : "ip", "cc", "memory");
 }
 
 REGISTER(ScanWrite32PtrUnrollLoop, 4, 4, 16);
@@ -142,7 +142,7 @@ void ScanWrite32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [value] "m" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "memory");
+        : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "cc", "memory");
 }
 
 REGISTER(ScanWrite32PtrMultiLoop, 4, 4, 8);
@@ -162,7 +162,7 @@ void ScanRead32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r0");
+        : "ip", "r0", "cc", "memory");
 }
 
 REGISTER(ScanRead32PtrSimpleLoop, 4, 4, 1);
@@ -202,7 +202,7 @@ void ScanRead32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r0");
+        : "ip", "r0", "cc", "memory");
 }
 
 REGISTER(ScanRead32PtrUnrollLoop, 4, 4, 16);
@@ -222,7 +222,7 @@ void ScanRead32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
+        : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "cc", "memory");
 }
 
 REGISTER(ScanRead32PtrMultiLoop, 4, 4, 1);
@@ -263,7 +263,7 @@ void ScanWrite32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [value] "r" (value), [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
-        : "ip", "memory");
+        : "ip", "cc", "memory");
 }
 
 REGISTER(ScanWrite32IndexSimpleLoop, 4, 4, 1);
@@ -284,7 +284,7 @@ void ScanRead32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
-        : "ip", "r0");
+        : "ip", "r0", "cc", "memory");
 }
 
 REGISTER(ScanRead32IndexSimpleLoop, 4, 4, 1);
@@ -336,7 +336,7 @@ void ScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5", "memory");
+        : "ip", "r4", "r5", "cc", "memory");
 }
 
 REGISTER(ScanWrite64PtrSimpleLoop, 8, 8, 1);
@@ -380,7 +380,7 @@ void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5");
+        : "ip", "r4", "r5", "cc", "memory");
 }
 
 REGISTER(ScanWrite64PtrUnrollLoop, 8, 8, 16);
@@ -400,7 +400,7 @@ void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5");
+        : "ip", "r4", "r5", "cc", "memory");
 }
 
 REGISTER(ScanRead64PtrSimpleLoop, 8, 8, 1);
@@ -440,7 +440,7 @@ void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "bne    1b \n"
         :
         : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5");
+        : "ip", "r4", "r5", "cc", "memory");
 }
 
 REGISTER(ScanRead64PtrUnrollLoop, 8, 8, 16);
@@ -483,7 +483,7 @@ void PermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
         "bne    1b \n"
         :
         : [memarea] "r" (memarea), [repeats] "r" (repeats)
-        : "ip");
+        : "ip", "cc", "memory");
 }
 
 REGISTER_PERM(PermRead32SimpleLoop, 4);
@@ -521,7 +521,7 @@ void PermRead32UnrollLoop(char* memarea, size_t, size_t repeats)
         "bne    1b \n"
         :
         : [memarea] "r" (memarea), [repeats] "r" (repeats)
-        : "ip");
+        : "ip", "cc", "memory");
 }
 
 REGISTER_PERM(PermRead32UnrollLoop, 4);
