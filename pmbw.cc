@@ -73,6 +73,9 @@ bool gopt_nthreads_quadratic = false;
 // option to test permutation cycle before measurement
 bool gopt_testcycle = false;
 
+// option to change the output file from default "stats.txt"
+const char* gopt_output_file = "stats.txt";
+
 // error writers
 #define ERR(x)  do { std::cerr << x << std::endl; } while(0)
 #define ERRX(x)  do { (std::cerr << x).flush(); } while(0)
@@ -558,7 +561,7 @@ void* thread_master(void* cookie)
 
                 std::cout << result.str() << std::endl;
 
-                std::ofstream resultfile("stats.txt", std::ios::app);
+                std::ofstream resultfile(gopt_output_file, std::ios::app);
                 resultfile << result.str() << std::endl;
             }
         }
@@ -664,6 +667,7 @@ void print_usage(const char* prog)
         << "Options:" << std::endl
         << "  -f <match>     Run only benchmarks containing this substring, can be used multile times. Try \"list\"." << std::endl
         << "  -M <size>      Limit the maximum amount of memory allocated at startup [byte]." << std::endl
+        << "  -o <file>      Write the results to <file> instead of stats.txt." << std::endl
         << "  -p <nthrs>     Run benchmarks with at least this thread count." << std::endl
         << "  -P <nthrs>     Run benchmarks with at most this thread count (overrides detected processor count)." << std::endl
         << "  -Q             Run benchmarks with quadratically increasing thread count." << std::endl
@@ -678,7 +682,7 @@ int main(int argc, char* argv[])
 
     int opt;
 
-    while ( (opt = getopt(argc, argv, "hf:M:p:P:Qs:S:")) != -1 )
+    while ( (opt = getopt(argc, argv, "hf:M:o:p:P:Qs:S:")) != -1 )
     {
         switch (opt) {
         default:
@@ -719,6 +723,11 @@ int main(int argc, char* argv[])
             else {
                 ERR("Setting memory limit to " << gopt_memlimit << ".");
             }
+            break;
+
+        case 'o':
+            gopt_output_file = optarg;
+            ERR("Writing results to " << gopt_output_file << ".");
             break;
 
         case 'Q':
@@ -840,7 +849,7 @@ int main(int argc, char* argv[])
 
     // *** perform memory tests
 
-    unlink("stats.txt");
+    unlink(gopt_output_file);
 
     for (size_t i = 0; i < g_testlist.size(); ++i)
     {
