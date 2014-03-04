@@ -55,7 +55,8 @@ void cScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 // 32-bit writer in a simple loop (Assembler version)
 void ScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    $0xC0FFEEEE, %%eax \n"  // rax = test value
+    asm volatile(
+        "mov    $0xC0FFEEEE, %%eax \n"  // rax = test value
         "1: \n" // start of repeat loop
         "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
         "2: \n" // start of write loop
@@ -77,7 +78,8 @@ REGISTER(ScanWrite32PtrSimpleLoop, 4, 4, 1);
 // 32-bit writer in an unrolled loop (Assembler version)
 void ScanWrite32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    $0xC0FFEEEE, %%eax \n"  // rax = test value
+    asm volatile(
+        "mov    $0xC0FFEEEE, %%eax \n"  // rax = test value
         "1: \n" // start of repeat loop
         "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
         "2: \n" // start of write loop
@@ -114,7 +116,8 @@ REGISTER(ScanWrite32PtrUnrollLoop, 4, 4, 16);
 // 32-bit reader in a simple loop (Assembler version)
 void ScanRead32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
         "2: \n" // start of read loop
         "mov    (%%ecx), %%eax \n"
@@ -135,7 +138,8 @@ REGISTER(ScanRead32PtrSimpleLoop, 4, 4, 1);
 // 32-bit reader in an unrolled loop (Assembler version)
 void ScanRead32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
         "2: \n" // start of read loop
         "mov    0*4(%%ecx), %%eax \n"
@@ -189,7 +193,8 @@ void cScanWrite32IndexSimpleLoop(char* _memarea, size_t _size, size_t repeats)
 // 32-bit writer in an indexed loop (Assembler version)
 void ScanWrite32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    $0xC0FFEEEE, %%eax \n" // rax = test value
+    asm volatile(
+        "mov    $0xC0FFEEEE, %%eax \n" // rax = test value
         "1: \n" // start of repeat loop
         "xor    %%ecx, %%ecx \n"        // rcx = reset index
         "2: \n" // start of write loop
@@ -211,7 +216,8 @@ REGISTER(ScanWrite32IndexSimpleLoop, 4, 4, 1);
 // 32-bit writer in an indexed unrolled loop (Assembler version)
 void ScanWrite32IndexUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    $0xC0FFEEEE, %%eax \n" // rax = test value
+    asm volatile(
+        "mov    $0xC0FFEEEE, %%eax \n" // rax = test value
         "1: \n" // start of repeat loop
         "xor    %%ecx, %%ecx \n"        // rcx = reset index
         "2: \n" // start of write loop
@@ -248,7 +254,8 @@ REGISTER(ScanWrite32IndexUnrollLoop, 4, 4, 16);
 // 32-bit reader in an indexed loop (Assembler version)
 void ScanRead32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "xor    %%ecx, %%ecx \n"        // rcx = reset index
         "2: \n" // start of read loop
         "mov    (%[memarea],%%ecx), %%eax \n"
@@ -269,7 +276,8 @@ REGISTER(ScanRead32IndexSimpleLoop, 4, 4, 1);
 // 32-bit reader in an indexed unrolled loop (Assembler version)
 void ScanRead32IndexUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "xor    %%ecx, %%ecx \n"        // rcx = reset index
         "2: \n" // start of read loop
         "mov    0*4(%[memarea],%%ecx), %%eax \n"
@@ -313,7 +321,8 @@ void ScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     char fxsave[512] __attribute__((aligned(16)));
 
-    asm("fxsave %[fxsave] \n"           // save FPU state
+    asm volatile(
+        "fxsave %[fxsave] \n"           // save FPU state
         "mov    $0xC0FFEEEE, %%eax \n"
         "movd   %%eax, %%mm0 \n"
         "punpckldq %%mm0, %%mm0 \n"
@@ -342,7 +351,8 @@ void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     char fxsave[512] __attribute__((aligned(16)));
 
-    asm("fxsave %[fxsave] \n"           // save FPU state
+    asm volatile(
+        "fxsave %[fxsave] \n"           // save FPU state
         "mov    $0xC0FFEEEE, %%eax \n"
         "movd   %%eax, %%mm0 \n"
         "punpckldq %%mm0, %%mm0 \n"
@@ -390,7 +400,8 @@ void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     char fxsave[512] __attribute__((aligned(16)));
 
-    asm("fxsave %[fxsave] \n"           // save FPU state
+    asm volatile(
+        "fxsave %[fxsave] \n"           // save FPU state
         "1: \n" // start of repeat loop
         "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
         "2: \n" // start of read loop
@@ -416,7 +427,8 @@ void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     char fxsave[512] __attribute__((aligned(16)));
 
-    asm("fxsave %[fxsave] \n"           // save FPU state
+    asm volatile(
+        "fxsave %[fxsave] \n"           // save FPU state
         "1: \n" // start of repeat loop
         "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
         "2: \n" // start of read loop
@@ -467,7 +479,8 @@ void ScanWrite128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     char fxsave[512] __attribute__((aligned(16)));
 
-    asm("fxsave %[fxsave] \n"           // save FPU state
+    asm volatile(
+        "fxsave %[fxsave] \n"           // save FPU state
         "mov    $0xC0FFEEEE, %%eax \n"
         "movd   %%eax, %%xmm0 \n"
         "punpckldq %%xmm0, %%xmm0 \n"
@@ -497,7 +510,8 @@ void ScanWrite128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     char fxsave[512] __attribute__((aligned(16)));
 
-    asm("fxsave %[fxsave] \n"           // save FPU state
+    asm volatile(
+        "fxsave %[fxsave] \n"           // save FPU state
         "mov    $0xC0FFEEEE, %%eax \n"
         "movd   %%eax, %%xmm0 \n"
         "punpckldq %%xmm0, %%xmm0 \n"
@@ -546,7 +560,8 @@ void ScanRead128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     char fxsave[512] __attribute__((aligned(16)));
 
-    asm("fxsave %[fxsave] \n"           // save FPU state
+    asm volatile(
+        "fxsave %[fxsave] \n"           // save FPU state
         "1: \n" // start of repeat loop
         "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
         "2: \n" // start of read loop
@@ -572,7 +587,8 @@ void ScanRead128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     char fxsave[512] __attribute__((aligned(16)));
 
-    asm("fxsave %[fxsave] \n"           // save FPU state
+    asm volatile(
+        "fxsave %[fxsave] \n"           // save FPU state
         "1: \n" // start of repeat loop
         "mov    %[memarea], %%eax \n"   // rax = reset loop iterator
         "2: \n" // start of read loop
@@ -621,7 +637,8 @@ REGISTER_CPUFEAT(ScanRead128PtrUnrollLoop, "sse", 16, 16, 16);
 // 16-bit writer in a simple loop (Assembler version)
 void ScanWrite16PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    $0xCFFE, %%ax \n"       // ax = test value
+    asm volatile(
+        "mov    $0xCFFE, %%ax \n"       // ax = test value
         "1: \n" // start of repeat loop
         "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
         "2: \n" // start of write loop
@@ -643,7 +660,8 @@ REGISTER(ScanWrite16PtrSimpleLoop, 2, 2, 1);
 // 16-bit writer in an unrolled loop (Assembler version)
 void ScanWrite16PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("mov    $0xC0FFEEEE, %%eax \n"  // eax = test value
+    asm volatile(
+        "mov    $0xC0FFEEEE, %%eax \n"  // eax = test value
         "1: \n" // start of repeat loop
         "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
         "2: \n" // start of write loop
@@ -680,7 +698,8 @@ REGISTER(ScanWrite16PtrUnrollLoop, 2, 2, 16);
 // 16-bit reader in a simple loop (Assembler version)
 void ScanRead16PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
         "2: \n" // start of read loop
         "mov    (%%ecx), %%eax \n"
@@ -701,7 +720,8 @@ REGISTER(ScanRead16PtrSimpleLoop, 2, 2, 1);
 // 16-bit reader in an unrolled loop (Assembler version)
 void ScanRead16PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    %[memarea], %%ecx \n"   // rcx = reset loop iterator
         "2: \n" // start of read loop
         "mov    0*2(%%ecx), %%eax \n"
@@ -760,7 +780,8 @@ void cPermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
 // follow 32-bit permutation in a simple loop (Assembler version)
 void PermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    %[memarea], %%eax \n"   // rax = reset iterator
         "2: \n" // start of read loop
         "mov    (%%eax), %%eax \n"
@@ -780,7 +801,8 @@ REGISTER_PERM(PermRead32SimpleLoop, 4);
 // follow 32-bit permutation in an unrolled loop (Assembler version)
 void PermRead32UnrollLoop(char* memarea, size_t, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    %[memarea], %%eax \n"   // rax = reset iterator
         "2: \n" // start of read loop
         "mov    (%%eax), %%eax \n"
