@@ -62,6 +62,7 @@ static const char* funclist[] =
     "ScanWrite128PtrUnrollLoop",
     "ScanRead128PtrSimpleLoop",
     "ScanRead128PtrUnrollLoop",
+    "cScanWrite128PtrSimpleLoop",
 
     "ScanWrite64PtrSimpleLoop",
     "ScanWrite64PtrUnrollLoop",
@@ -71,6 +72,8 @@ static const char* funclist[] =
     "ScanWrite64IndexUnrollLoop",
     "ScanRead64IndexSimpleLoop",
     "ScanRead64IndexUnrollLoop",
+    "cScanWrite64PtrSimpleLoop",
+    "cScanWrite64IndexSimpleLoop",
 
     "ScanWrite32PtrSimpleLoop",
     "ScanWrite32PtrUnrollLoop",
@@ -82,6 +85,7 @@ static const char* funclist[] =
     "ScanWrite32IndexUnrollLoop",
     "ScanRead32IndexSimpleLoop",
     "ScanRead32IndexUnrollLoop",
+    "cScanWrite32PtrSimpleLoop",
     "cScanWrite32IndexSimpleLoop",
 
     "ScanWrite16PtrSimpleLoop",
@@ -91,6 +95,7 @@ static const char* funclist[] =
 
     "PermRead64SimpleLoop",
     "PermRead64UnrollLoop",
+    "cPermRead64SimpleLoop",
 
     "PermRead32SimpleLoop",
     "PermRead32UnrollLoop",
