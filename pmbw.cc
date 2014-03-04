@@ -168,16 +168,7 @@ TestFunction::TestFunction(const char* n, testfunc_type f, const char* cf,
 // -----------------------------------------------------------------------------
 // --- Test CPU Features via CPUID
 
-#if __arm__
-static void cpuid_detect()
-{
-    // replace functions with dummys
-}
-bool TestFunction::is_supported() const
-{
-    return true;
-}
-#else
+#if defined(__i386__) || defined (__x86_64__)
 //  gcc inline assembly for CPUID instruction
 static inline void cpuid(int op, int out[4])
 {
@@ -228,6 +219,15 @@ bool TestFunction::is_supported() const
     if (strcmp(cpufeat,"sse") == 0) return cpuid_sse();
     if (strcmp(cpufeat,"avx") == 0) return cpuid_avx();
     return false;
+}
+#else
+static void cpuid_detect()
+{
+    // replace functions with dummys
+}
+bool TestFunction::is_supported() const
+{
+    return true;
 }
 #endif
 
