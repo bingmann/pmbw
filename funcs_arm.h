@@ -68,8 +68,8 @@ void ScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "ip", "cc", "memory");
 }
 
@@ -110,8 +110,8 @@ void ScanWrite32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "ip", "cc", "memory");
 }
 
@@ -140,8 +140,8 @@ void ScanWrite32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "m" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [value] "m" (value), [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "cc", "memory");
 }
 
@@ -160,8 +160,8 @@ void ScanRead32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "ip", "r0", "cc", "memory");
 }
 
@@ -200,8 +200,8 @@ void ScanRead32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "ip", "r0", "cc", "memory");
 }
 
@@ -220,8 +220,8 @@ void ScanRead32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "cc", "memory");
 }
 
@@ -261,8 +261,8 @@ void ScanWrite32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "r" (value), [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [value] "r" (value), [memarea] "r" (memarea), [size] "r" (size)
         : "ip", "cc", "memory");
 }
 
@@ -282,8 +282,8 @@ void ScanRead32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [size] "r" (size)
         : "ip", "r0", "cc", "memory");
 }
 
@@ -334,8 +334,8 @@ void ScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "ip", "r4", "r5", "cc", "memory");
 }
 
@@ -378,8 +378,8 @@ void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "ip", "r4", "r5", "cc", "memory");
 }
 
@@ -398,8 +398,8 @@ void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "ip", "r4", "r5", "cc", "memory");
 }
 
@@ -438,8 +438,8 @@ void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "ip", "r4", "r5", "cc", "memory");
 }
 
@@ -481,8 +481,8 @@ void PermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea)
         : "ip", "cc", "memory");
 }
 
@@ -519,8 +519,8 @@ void PermRead32UnrollLoop(char* memarea, size_t, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea)
         : "ip", "cc", "memory");
 }
 

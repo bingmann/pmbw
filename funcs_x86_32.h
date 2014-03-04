@@ -67,8 +67,8 @@ void ScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -104,8 +104,8 @@ void ScanWrite32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -125,8 +125,8 @@ void ScanRead32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -161,8 +161,8 @@ void ScanRead32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -201,8 +201,8 @@ void ScanWrite32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [size] "r" (size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -238,8 +238,8 @@ void ScanWrite32IndexUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [size] "r" (size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -259,8 +259,8 @@ void ScanRead32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [size] "r" (size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -295,8 +295,8 @@ void ScanRead32IndexUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [size] "r" (size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -329,8 +329,8 @@ void ScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         "fxrstor %[fxsave] \n"          // restore FPU state
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats),
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size),
           [fxsave] "m" (*fxsave)
         : "eax", "cc", "memory");
 }
@@ -377,8 +377,8 @@ void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         "fxrstor %[fxsave] \n"          // restore FPU state
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats),
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size),
           [fxsave] "m" (*fxsave)
         : "eax", "cc", "memory");
 }
@@ -403,8 +403,8 @@ void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         "fxrstor %[fxsave] \n"          // restore FPU state
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats),
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size),
           [fxsave] "m" (*fxsave)
         : "eax", "cc", "memory");
 }
@@ -448,8 +448,8 @@ void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         "fxrstor %[fxsave] \n"          // restore FPU state
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats),
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size),
           [fxsave] "m" (*fxsave)
         : "eax", "cc", "memory");
 }
@@ -484,8 +484,8 @@ void ScanWrite128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         "fxrstor %[fxsave] \n"          // restore FPU state
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats),
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size),
           [fxsave] "m" (*fxsave)
         : "eax", "cc", "memory");
 }
@@ -533,8 +533,8 @@ void ScanWrite128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         "fxrstor %[fxsave] \n"          // restore FPU state
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats),
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size),
           [fxsave] "m" (*fxsave)
         : "eax", "cc", "memory");
 }
@@ -559,8 +559,8 @@ void ScanRead128PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         "fxrstor %[fxsave] \n"          // restore FPU state
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats),
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size),
           [fxsave] "m" (*fxsave)
         : "eax", "cc", "memory");
 }
@@ -604,8 +604,8 @@ void ScanRead128PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
         "fxrstor %[fxsave] \n"          // restore FPU state
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats),
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size),
           [fxsave] "m" (*fxsave)
         : "eax", "cc", "memory");
 }
@@ -633,8 +633,8 @@ void ScanWrite16PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -670,8 +670,8 @@ void ScanWrite16PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -691,8 +691,8 @@ void ScanRead16PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -727,8 +727,8 @@ void ScanRead16PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
         : "eax", "ecx", "cc", "memory");
 }
 
@@ -770,8 +770,8 @@ void PermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea)
         : "eax", "cc", "memory");
 }
 
@@ -808,8 +808,8 @@ void PermRead32UnrollLoop(char* memarea, size_t, size_t repeats)
         // test repeat loop condition
         "dec    %[repeats] \n"          // until repeats = 0
         "jnz    1b \n"
-        :
-        : [memarea] "r" (memarea), [repeats] "r" (repeats)
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea)
         : "eax", "cc", "memory");
 }
 
