@@ -104,6 +104,9 @@ static const char* funclist[] =
     NULL
 };
 
+/// global: function names not found in funclist, in the order of appearance
+std::vector<std::string> g_unknown_funclist;
+
 // ****************************************************************************
 // *** Functions to read RESULT key-value files into Result vector
 
@@ -179,13 +182,22 @@ parse_double(const std::string& value, double& out)
 static inline bool
 find_funcname(const std::string& funcname, size_t& funcname_id)
 {
-    for (size_t i = 0; funclist[i]; ++i) {
+    size_t i;
+    for (i = 0; funclist[i]; ++i) {
         if (funcname == funclist[i]) {
             funcname_id = i;
             return true;
         }
     }
+    for (std::vector<std::string>::const_iterator it = g_unknown_funclist.begin(); it != g_unknown_funclist.end(); ++it, ++i) {
+        if (funcname == *it) {
+            funcname_id = i;
+            return true;
+        }
+    }
     std::cerr << "Unknown funcname=" << funcname << "\n";
+    g_unknown_funclist.push_back(funcname);
+    funcname_id = i;
     return false;
 }
 
@@ -592,6 +604,9 @@ void plot_parallel(std::ostream& os)
     for (size_t i = 0; funclist[i]; ++i)
     {
         plot_parallel_funcname(os,funclist[i]);
+    }
+    for (std::vector<std::string>::const_iterator it = g_unknown_funclist.begin(); it != g_unknown_funclist.end(); ++it) {
+        plot_parallel_funcname(os, *it);
     }
 }
 
