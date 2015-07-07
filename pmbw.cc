@@ -36,6 +36,7 @@
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
+#include <errno.h>
 #include <time.h>
 
 #include <pthread.h>
@@ -295,6 +296,19 @@ static inline bool match_funcfilter(const char* funcname)
     return false;
 }
 
+// pin this thread to the core, where cores are numbered 0 .. n-1
+void pin_self_to_core(int core_id)
+{
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_id, &cpuset);
+
+    pthread_t current_thread = pthread_self();
+    if (pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset) != 0)
+        ERRX("Cannot set thread affinity for thread " << core_id << ": "
+             << strerror(errno));
+}
+
 // -----------------------------------------------------------------------------
 // --- List of Array Sizes to Test
 
@@ -442,6 +456,8 @@ void* thread_master(void* cookie)
     int thread_num = *((int*)cookie);
     delete (int*)cookie;
 
+    pin_self_to_core(thread_num);
+
     // initial repeat factor is just an approximate B/s bandwidth
     uint64_t factor = 1024*1024*1024;
 
@@ -587,6 +603,8 @@ void* thread_worker(void* cookie)
     // this weirdness is because (void*) cannot be cast to int and back.
     int thread_num = *((int*)cookie);
     delete (int*)cookie;
+
+    pin_self_to_core(thread_num);
 
     while (1)
     {
