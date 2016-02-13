@@ -242,6 +242,24 @@ parse_uint64t(const char* value, uint64_t& out)
 {
     char* endp;
     out = strtoull(value, &endp, 10);
+    if (!endp) return false;
+    // read additional suffix
+    if (*endp == 'k' || *endp == 'K') {
+        out *= 1024;
+        ++endp;
+    }
+    else if (*endp == 'm' || *endp == 'M') {
+        out *= 1024 * 1024;
+        ++endp;
+    }
+    else if (*endp == 'g' || *endp == 'G') {
+        out *= 1024 * 1024 * 1024llu;
+        ++endp;
+    }
+    else if (*endp == 't' || *endp == 'T') {
+        out *= 1024 * 1024 * 1024 * 1024llu;
+        ++endp;
+    }
     return (endp && *endp == 0);
 }
 
@@ -251,6 +269,24 @@ parse_int(const char* value, int& out)
 {
     char* endp;
     out = strtoul(value, &endp, 10);
+    if (!endp) return false;
+    // read additional suffix
+    if (*endp == 'k' || *endp == 'K') {
+        out *= 1024;
+        ++endp;
+    }
+    else if (*endp == 'm' || *endp == 'M') {
+        out *= 1024 * 1024;
+        ++endp;
+    }
+    else if (*endp == 'g' || *endp == 'G') {
+        out *= 1024 * 1024 * 1024llu;
+        ++endp;
+    }
+    else if (*endp == 't' || *endp == 'T') {
+        out *= 1024 * 1024 * 1024 * 1024llu;
+        ++endp;
+    }
     return (endp && *endp == 0);
 }
 
