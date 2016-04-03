@@ -161,6 +161,8 @@ TestFunction::TestFunction(const char* n, testfunc_type f, const char* cf,
   #include "funcs_x86_64.h"
 #elif defined(__i386__)
   #include "funcs_x86_32.h"
+#elif __aarch64__
+  #include "funcs_arm64.h"
 #elif __arm__
   #include "funcs_arm.h"
 #else
