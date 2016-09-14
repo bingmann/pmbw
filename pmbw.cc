@@ -43,6 +43,10 @@
 #include <malloc.h>
 #include <numa.h>
 
+#if ON_WINDOWS
+#include <windows.h>
+#endif
+
 // -----------------------------------------------------------------------------
 // --- Global Settings and Variables
 
@@ -71,6 +75,9 @@ bool gopt_nthreads_quadratic = false;
 // option to test permutation cycle before measurement
 bool gopt_testcycle = false;
 
+// option to change the output file from default "stats.txt"
+const char* gopt_output_file = "stats.txt";
+
 // error writers
 #define ERR(x)  do { std::cerr << x << std::endl; } while(0)
 #define ERRX(x)  do { (std::cerr << x).flush(); } while(0)
@@ -95,6 +102,9 @@ std::vector<uint64_t> g_numa_nodesize, g_numa_nodefree;
 // number of NUMA nodes to hop for memory area
 int g_numa_hop = 0;
 
+// hostname
+char g_hostname[256];
+
 // -----------------------------------------------------------------------------
 // --- Registry for Memory Testing Functions
 
@@ -117,12 +127,16 @@ struct TestFunction
     // bytes skipped foward to next access point (including bytes_per_access)
     unsigned int access_offset;
 
+    // number of accesses before and after
+    unsigned int unroll_factor;
+
     // fill the area with a permutation before calling the func
     bool make_permutation;
 
     // constructor which also registers the function
     TestFunction(const char* n, testfunc_type f, const char* cf,
-                 unsigned int bpa, unsigned int ao, bool mp);
+                 unsigned int bpa, unsigned int ao, unsigned int unr,
+                 bool mp);
 
     // test CPU feature support
     bool is_supported() const;
@@ -130,50 +144,45 @@ struct TestFunction
 
 std::vector<TestFunction*> g_testlist;
 
-TestFunction::TestFunction(const char* n, testfunc_type f,const char* cf,
-                           unsigned int bpa, unsigned int ao, bool mp)
+TestFunction::TestFunction(const char* n, testfunc_type f, const char* cf,
+                           unsigned int bpa, unsigned int ao, unsigned int unr,
+                           bool mp)
     : name(n), func(f), cpufeat(cf),
-      bytes_per_access(bpa), access_offset(ao), make_permutation(mp)
+      bytes_per_access(bpa), access_offset(ao), unroll_factor(unr),
+      make_permutation(mp)
 {
     g_testlist.push_back(this);
 }
 
-#define REGISTER(func, bytes, offset)                           \
-    static const class TestFunction* _##func##_register =       \
-        new TestFunction(#func,func,NULL,bytes,offset,false);
+#define REGISTER(func, bytes, offset, unroll)                   \
+    static const struct TestFunction* _##func##_register =       \
+        new TestFunction(#func,func,NULL,bytes,offset,unroll,false);
 
-#define REGISTER_CPUFEAT(func, cpufeat, bytes, offset)          \
-    static const class TestFunction* _##func##_register =       \
-        new TestFunction(#func,func,cpufeat,bytes,offset,false);
+#define REGISTER_CPUFEAT(func, cpufeat, bytes, offset, unroll)  \
+    static const struct TestFunction* _##func##_register =       \
+        new TestFunction(#func,func,cpufeat,bytes,offset,unroll,false);
 
 #define REGISTER_PERM(func, bytes)                              \
-    static const class TestFunction* _##func##_register =       \
-        new TestFunction(#func,func,NULL,bytes,bytes,true);
+    static const struct TestFunction* _##func##_register =       \
+        new TestFunction(#func,func,NULL,bytes,bytes,1,true);
 
 // -----------------------------------------------------------------------------
 // --- Test Functions with Inline Assembler Loops
 
 #if __x86_64__
   #include "funcs_x86_64.h"
+#elif defined(__i386__)
+  #include "funcs_x86_32.h"
 #elif __arm__
   #include "funcs_arm.h"
 #else
-  #include "funcs_x86_32.h"
+  #include "funcs_c.h"
 #endif
 
 // -----------------------------------------------------------------------------
 // --- Test CPU Features via CPUID
 
-#if __arm__
-static void cpuid_detect()
-{
-    // replace functions with dummys
-}
-bool TestFunction::is_supported() const
-{
-    return true;
-}
-#else
+#if defined(__i386__) || defined (__x86_64__)
 //  gcc inline assembly for CPUID instruction
 static inline void cpuid(int op, int out[4])
 {
@@ -225,6 +234,15 @@ bool TestFunction::is_supported() const
     if (strcmp(cpufeat,"avx") == 0) return cpuid_avx();
     return false;
 }
+#else
+static void cpuid_detect()
+{
+    // replace functions with dummys
+}
+bool TestFunction::is_supported() const
+{
+    return true;
+}
 #endif
 
 // -----------------------------------------------------------------------------
@@ -236,6 +254,24 @@ parse_uint64t(const char* value, uint64_t& out)
 {
     char* endp;
     out = strtoull(value, &endp, 10);
+    if (!endp) return false;
+    // read additional suffix
+    if (*endp == 'k' || *endp == 'K') {
+        out *= 1024;
+        ++endp;
+    }
+    else if (*endp == 'm' || *endp == 'M') {
+        out *= 1024 * 1024;
+        ++endp;
+    }
+    else if (*endp == 'g' || *endp == 'G') {
+        out *= 1024 * 1024 * 1024llu;
+        ++endp;
+    }
+    else if (*endp == 't' || *endp == 'T') {
+        out *= 1024 * 1024 * 1024 * 1024llu;
+        ++endp;
+    }
     return (endp && *endp == 0);
 }
 
@@ -245,6 +281,24 @@ parse_int(const char* value, int& out)
 {
     char* endp;
     out = strtoul(value, &endp, 10);
+    if (!endp) return false;
+    // read additional suffix
+    if (*endp == 'k' || *endp == 'K') {
+        out *= 1024;
+        ++endp;
+    }
+    else if (*endp == 'm' || *endp == 'M') {
+        out *= 1024 * 1024;
+        ++endp;
+    }
+    else if (*endp == 'g' || *endp == 'G') {
+        out *= 1024 * 1024 * 1024llu;
+        ++endp;
+    }
+    else if (*endp == 't' || *endp == 'T') {
+        out *= 1024 * 1024 * 1024 * 1024llu;
+        ++endp;
+    }
     return (endp && *endp == 0);
 }
 
@@ -266,7 +320,12 @@ struct LCGRandom
 static inline double timestamp()
 {
     struct timespec ts;
+#ifdef __bgq__
+    // CLOCK_MONOTONIC is not supported on BG/Q
+    clock_gettime(CLOCK_REALTIME, &ts);
+#else
     clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
     return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
@@ -460,10 +519,11 @@ void* thread_master(void* cookie)
             // divide area by thread number
             g_thrsize = *areasize / g_nthreads;
 
-            // unrolled tests do 16 accesses without loop check, thus align
-            // upward to next multiple of 16*size (e.g. 128 bytes for 64-bit)
-            uint64_t unrollsize = 16 * g_func->bytes_per_access;
-            g_thrsize = ((g_thrsize + unrollsize) / unrollsize) * unrollsize;
+            // unrolled tests do up to 16 accesses without loop check, thus align
+            // upward to next multiple of unroll_factor*size (e.g. 128 bytes for
+            // 16-times unrolled 64-bit access)
+            uint64_t unrollsize = g_func->unroll_factor * g_func->bytes_per_access;
+            g_thrsize = ((g_thrsize + unrollsize - 1) / unrollsize) * unrollsize;
 
             // total size tested
             uint64_t testsize = g_thrsize * g_nthreads;
@@ -550,13 +610,9 @@ void* thread_master(void* cookie)
                 time_t tnow = time(NULL);
 
                 strftime(datetime, sizeof(datetime), "%Y-%m-%d %H:%M:%S", localtime(&tnow));
-                result << "datetime=" << datetime << '\t';
-
-                char hostname[256];
-                gethostname(hostname, sizeof(hostname));
-                result << "host=" << hostname << '\t';
-
-                result << "version=" << PACKAGE_VERSION << '\t'
+                result << "datetime=" << datetime << '\t'
+                       << "host=" << g_hostname << '\t'
+                       << "version=" << PACKAGE_VERSION << '\t'
                        << "funcname=" << g_func->name << '\t'
                        << "nthreads=" << g_nthreads << '\t'
                        << "numahop=" << g_numa_hop << '\t'
@@ -572,7 +628,7 @@ void* thread_master(void* cookie)
 
                 std::cout << result.str() << std::endl;
 
-                std::ofstream resultfile("stats.txt", std::ios::app);
+                std::ofstream resultfile(gopt_output_file, std::ios::app);
                 resultfile << result.str() << std::endl;
             }
         }
@@ -689,6 +745,7 @@ void print_usage(const char* prog)
         << "Options:" << std::endl
         << "  -f <match>     Run only benchmarks containing this substring, can be used multile times. Try \"list\"." << std::endl
         << "  -M <size>      Limit the maximum amount of memory allocated at startup [byte]." << std::endl
+        << "  -o <file>      Write the results to <file> instead of stats.txt." << std::endl
         << "  -p <nthrs>     Run benchmarks with at least this thread count." << std::endl
         << "  -P <nthrs>     Run benchmarks with at most this thread count (overrides detected processor count)." << std::endl
         << "  -Q             Run benchmarks with quadratically increasing thread count." << std::endl
@@ -703,7 +760,7 @@ int main(int argc, char* argv[])
 
     int opt;
 
-    while ( (opt = getopt(argc, argv, "hf:M:p:P:Qs:S:")) != -1 )
+    while ( (opt = getopt(argc, argv, "hf:M:o:p:P:Qs:S:")) != -1 )
     {
         switch (opt) {
         default:
@@ -744,6 +801,11 @@ int main(int argc, char* argv[])
             else {
                 ERR("Setting memory limit to " << gopt_memlimit << ".");
             }
+            break;
+
+        case 'o':
+            gopt_output_file = optarg;
+            ERR("Writing results to " << gopt_output_file << ".");
             break;
 
         case 'Q':
@@ -799,6 +861,13 @@ int main(int argc, char* argv[])
         }
     }
 
+#if !ON_WINDOWS
+    gethostname(g_hostname, sizeof(g_hostname));
+#else
+    DWORD hostnameSize = sizeof(g_hostname);
+    GetComputerName(g_hostname, &hostnameSize);
+#endif
+
     // *** run CPUID
     cpuid_detect();
 
@@ -827,6 +896,9 @@ int main(int argc, char* argv[])
         ERR(nn << " [ " << g_numa_nodefree.back() / 1024/1024 <<
             " / " << g_numa_nodesize.back() / 1024/1024 << " MiB = " <<
             (100.0 * g_numa_nodefree.back() / g_numa_nodesize.back()) << "% ]");
+    // allocate memory area
+
+#if HAVE_POSIX_MEMALIGN
 
         g_memsize += g_numa_nodesize.back();
         g_memfree += g_numa_nodefree.back();
@@ -851,6 +923,12 @@ int main(int argc, char* argv[])
         g_memarea.push_back( (char*)mem );
     }
 
+#else
+
+    g_memarea = (char*)malloc(g_memsize);
+
+#endif
+
     // fill memory with junk, but this allocates physical memory
     ERR("Filling " << g_memsize_node / 1024/1024 << " MiB on each NUMA node.");
     for (int nn = 0; nn < g_numa_nodes; ++nn)
@@ -865,7 +943,7 @@ int main(int argc, char* argv[])
 
     // *** perform memory tests
 
-    unlink("stats.txt");
+    unlink(gopt_output_file);
 
     for (size_t i = 0; i < g_testlist.size(); ++i)
     {

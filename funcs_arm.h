@@ -51,14 +51,15 @@ void cScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
     while (--repeats != 0);
 }
 
-//REGISTER(cScanWrite32PtrSimpleLoop, 4, 4);
+//REGISTER(cScanWrite32PtrSimpleLoop, 4, 4, 1);
 
 // 32-bit writer in a simple loop (Assembler version)
 void ScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     uint32_t value = 0xC0FFEEEE;
 
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    ip, %[memarea] \n"      // ip = reset loop iterator
         "2: \n" // start of write loop
         "str    %[value], [ip], #4 \n"  // store and advance 4
@@ -68,19 +69,20 @@ void ScanWrite32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip");
+        : [repeats] "+r" (repeats)
+        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size)
+        : "ip", "cc", "memory");
 }
 
-REGISTER(ScanWrite32PtrSimpleLoop, 4, 4);
+REGISTER(ScanWrite32PtrSimpleLoop, 4, 4, 1);
 
 // 32-bit writer in an unrolled loop (Assembler version)
 void ScanWrite32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     uint32_t value = 0xC0FFEEEE;
 
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    ip, %[memarea] \n"      // ip = reset loop iterator
         "2: \n" // start of write loop
         "str    %[value], [ip,#0*4] \n"
@@ -110,19 +112,20 @@ void ScanWrite32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip");
+        : [repeats] "+r" (repeats)
+        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size)
+        : "ip", "cc", "memory");
 }
 
-REGISTER(ScanWrite32PtrUnrollLoop, 4, 4);
+REGISTER(ScanWrite32PtrUnrollLoop, 4, 4, 16);
 
 // 32-bit writer with multistore operations (Assembler version)
 void ScanWrite32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
 {
     uint32_t value = 0xC0FFEEEE;
 
-    asm("ldr    r4, %[value] \n"        // load values
+    asm volatile(
+        "ldr    r4, %[value] \n"        // load values
         "ldr    r5, %[value] \n"
         "ldr    r6, %[value] \n"
         "ldr    r7, %[value] \n"
@@ -140,17 +143,18 @@ void ScanWrite32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "m" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
+        : [repeats] "+r" (repeats)
+        : [value] "m" (value), [memarea] "r" (memarea), [end] "r" (memarea+size)
+        : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "cc", "memory");
 }
 
-REGISTER(ScanWrite32PtrMultiLoop, 4, 4);
+REGISTER(ScanWrite32PtrMultiLoop, 4, 4, 8);
 
 // 32-bit read in a simple loop (Assembler version)
 void ScanRead32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    ip, %[memarea] \n"      // ip = reset loop iterator
         "2: \n" // start of read loop
         "ldr    r0, [ip], #4 \n"        // retrieve and advance 4
@@ -160,17 +164,18 @@ void ScanRead32PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r0");
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
+        : "ip", "r0", "cc", "memory");
 }
 
-REGISTER(ScanRead32PtrSimpleLoop, 4, 4);
+REGISTER(ScanRead32PtrSimpleLoop, 4, 4, 1);
 
 // 32-bit reader in an unrolled loop (Assembler version)
 void ScanRead32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    ip, %[memarea] \n"      // ip = reset loop iterator
         "2: \n" // start of read loop
         "ldr    r0, [ip,#0*4] \n"
@@ -200,17 +205,18 @@ void ScanRead32PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r0");
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
+        : "ip", "r0", "cc", "memory");
 }
 
-REGISTER(ScanRead32PtrUnrollLoop, 4, 4);
+REGISTER(ScanRead32PtrUnrollLoop, 4, 4, 16);
 
 // 32-bit reader with multistore operations (Assembler version)
 void ScanRead32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    ip, %[memarea] \n"      // ip = reset loop iterator
         "2: \n" // start of read loop
         "ldmia  ip!, {r4-r11} \n"       // retrieve and advance
@@ -220,12 +226,12 @@ void ScanRead32PtrMultiLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11");
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
+        : "ip", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "r11", "cc", "memory");
 }
 
-REGISTER(ScanRead32PtrMultiLoop, 4, 4);
+REGISTER(ScanRead32PtrMultiLoop, 4, 4, 1);
 
 // -----------------------------------------------------------------------------
 
@@ -243,14 +249,15 @@ void cScanWrite32IndexSimpleLoop(char* _memarea, size_t _size, size_t repeats)
     while (--repeats != 0);
 }
 
-//REGISTER(cScanWrite32IndexSimpleLoop, 4, 4);
+//REGISTER(cScanWrite32IndexSimpleLoop, 4, 4, 1);
 
 // 32-bit writer in an indexed loop (Assembler version)
 void ScanWrite32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     uint32_t value = 0xC0FFEEEE;
 
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    ip, #0 \n"              // ip = reset index
         "2: \n" // start of write loop
         "str    %[value], [%[memarea], ip] \n" // store and advance 4
@@ -261,17 +268,18 @@ void ScanWrite32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "r" (value), [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
-        : "ip");
+        : [repeats] "+r" (repeats)
+        : [value] "r" (value), [memarea] "r" (memarea), [size] "r" (size)
+        : "ip", "cc", "memory");
 }
 
-REGISTER(ScanWrite32IndexSimpleLoop, 4, 4);
+REGISTER(ScanWrite32IndexSimpleLoop, 4, 4, 1);
 
 // 32-bit reader in an indexed loop (Assembler version)
 void ScanRead32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    ip, #0 \n"              // ip = reset index
         "2: \n" // start of read loop
         "ldr    r0, [%[memarea], ip] \n" // store and advance 4
@@ -282,12 +290,12 @@ void ScanRead32IndexSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [size] "r" (size), [repeats] "r" (repeats)
-        : "ip", "r0");
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [size] "r" (size)
+        : "ip", "r0", "cc", "memory");
 }
 
-REGISTER(ScanRead32IndexSimpleLoop, 4, 4);
+REGISTER(ScanRead32IndexSimpleLoop, 4, 4, 1);
 
 // ****************************************************************************
 // ----------------------------------------------------------------------------
@@ -315,14 +323,15 @@ void cScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
     while (--repeats != 0);
 }
 
-//REGISTER(cScanWrite64PtrSimpleLoop, 8, 8);
+//REGISTER(cScanWrite64PtrSimpleLoop, 8, 8, 1);
 
 // 64-bit writer in a simple loop (Assembler version)
 void ScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
     uint32_t value = 0xC0FFEEEE;
 
-    asm("mov    r4, %[value] \n"        // r4+r5 = 64-bit value
+    asm volatile(
+        "mov    r4, %[value] \n"        // r4+r5 = 64-bit value
         "mov    r5, %[value] \n"
         "1: \n" // start of repeat loop
         "mov    ip, %[memarea] \n"      // ip = reset loop iterator
@@ -334,19 +343,20 @@ void ScanWrite64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5");
+        : [repeats] "+r" (repeats)
+        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size)
+        : "ip", "r4", "r5", "cc", "memory");
 }
 
-REGISTER(ScanWrite64PtrSimpleLoop, 8, 8);
+REGISTER(ScanWrite64PtrSimpleLoop, 8, 8, 1);
 
 // 64-bit writer in an unrolled loop (Assembler version)
 void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
     uint32_t value = 0xC0FFEEEE;
 
-    asm("mov    r4, %[value] \n"        // r4+r5 = 64-bit value
+    asm volatile(
+        "mov    r4, %[value] \n"        // r4+r5 = 64-bit value
         "mov    r5, %[value] \n"
         "1: \n" // start of repeat loop
         "mov    ip, %[memarea] \n"      // ip = reset loop iterator
@@ -378,17 +388,18 @@ void ScanWrite64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5");
+        : [repeats] "+r" (repeats)
+        : [value] "r" (value), [memarea] "r" (memarea), [end] "r" (memarea+size)
+        : "ip", "r4", "r5", "cc", "memory");
 }
 
-REGISTER(ScanWrite64PtrUnrollLoop, 8, 8);
+REGISTER(ScanWrite64PtrUnrollLoop, 8, 8, 16);
 
 // 64-bit reader in a simple loop (Assembler version)
 void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    ip, %[memarea] \n"      // ip = reset loop iterator
         "2: \n" // start of read loop
         "ldrd   r4, [ip], #8 \n"        // retrieve and advance 8
@@ -398,17 +409,18 @@ void ScanRead64PtrSimpleLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5");
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
+        : "ip", "r4", "r5", "cc", "memory");
 }
 
-REGISTER(ScanRead64PtrSimpleLoop, 8, 8);
+REGISTER(ScanRead64PtrSimpleLoop, 8, 8, 1);
 
 // 64-bit reader in an unrolled loop (Assembler version)
 void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    ip, %[memarea] \n"      // ip = reset loop iterator
         "2: \n" // start of read loop
         "ldrd   r4, [ip,#0*8] \n"
@@ -438,12 +450,12 @@ void ScanRead64PtrUnrollLoop(char* memarea, size_t size, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [end] "r" (memarea+size), [repeats] "r" (repeats)
-        : "ip", "r4", "r5");
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea), [end] "r" (memarea+size)
+        : "ip", "r4", "r5", "cc", "memory");
 }
 
-REGISTER(ScanRead64PtrUnrollLoop, 8, 8);
+REGISTER(ScanRead64PtrUnrollLoop, 8, 8, 16);
 
 // ****************************************************************************
 // ----------------------------------------------------------------------------
@@ -471,7 +483,8 @@ void cPermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
 // follow 32-bit permutation in a simple loop (Assembler version)
 void PermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    ip, %[memarea] \n"      // ip = reset iterator
         "2: \n" // start of loop
         "ldr    ip, [ip] \n"
@@ -481,9 +494,9 @@ void PermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [repeats] "r" (repeats)
-        : "ip");
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea)
+        : "ip", "cc", "memory");
 }
 
 REGISTER_PERM(PermRead32SimpleLoop, 4);
@@ -491,7 +504,8 @@ REGISTER_PERM(PermRead32SimpleLoop, 4);
 // follow 32-bit permutation in an unrolled loop (Assembler version)
 void PermRead32UnrollLoop(char* memarea, size_t, size_t repeats)
 {
-    asm("1: \n" // start of repeat loop
+    asm volatile(
+        "1: \n" // start of repeat loop
         "mov    ip, %[memarea] \n"      // ip = reset iterator
         "2: \n" // start of loop
         "ldr    ip, [ip] \n"
@@ -519,9 +533,9 @@ void PermRead32UnrollLoop(char* memarea, size_t, size_t repeats)
         // test repeat loop condition
         "subs   %[repeats], %[repeats], #1 \n" // until repeats = 0
         "bne    1b \n"
-        :
-        : [memarea] "r" (memarea), [repeats] "r" (repeats)
-        : "ip");
+        : [repeats] "+r" (repeats)
+        : [memarea] "r" (memarea)
+        : "ip", "cc", "memory");
 }
 
 REGISTER_PERM(PermRead32UnrollLoop, 4);

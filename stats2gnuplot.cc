@@ -62,6 +62,7 @@ static const char* funclist[] =
     "ScanWrite128PtrUnrollLoop",
     "ScanRead128PtrSimpleLoop",
     "ScanRead128PtrUnrollLoop",
+    "cScanWrite128PtrSimpleLoop",
 
     "ScanWrite64PtrSimpleLoop",
     "ScanWrite64PtrUnrollLoop",
@@ -71,6 +72,8 @@ static const char* funclist[] =
     "ScanWrite64IndexUnrollLoop",
     "ScanRead64IndexSimpleLoop",
     "ScanRead64IndexUnrollLoop",
+    "cScanWrite64PtrSimpleLoop",
+    "cScanWrite64IndexSimpleLoop",
 
     "ScanWrite32PtrSimpleLoop",
     "ScanWrite32PtrUnrollLoop",
@@ -82,6 +85,7 @@ static const char* funclist[] =
     "ScanWrite32IndexUnrollLoop",
     "ScanRead32IndexSimpleLoop",
     "ScanRead32IndexUnrollLoop",
+    "cScanWrite32PtrSimpleLoop",
     "cScanWrite32IndexSimpleLoop",
 
     "ScanWrite16PtrSimpleLoop",
@@ -91,6 +95,7 @@ static const char* funclist[] =
 
     "PermRead64SimpleLoop",
     "PermRead64UnrollLoop",
+    "cPermRead64SimpleLoop",
 
     "PermRead32SimpleLoop",
     "PermRead32UnrollLoop",
@@ -98,6 +103,9 @@ static const char* funclist[] =
 
     NULL
 };
+
+/// global: function names not found in funclist, in the order of appearance
+std::vector<std::string> g_unknown_funclist;
 
 // ****************************************************************************
 // *** Functions to read RESULT key-value files into Result vector
@@ -174,13 +182,22 @@ parse_double(const std::string& value, double& out)
 static inline bool
 find_funcname(const std::string& funcname, size_t& funcname_id)
 {
-    for (size_t i = 0; funclist[i]; ++i) {
+    size_t i;
+    for (i = 0; funclist[i]; ++i) {
         if (funcname == funclist[i]) {
             funcname_id = i;
             return true;
         }
     }
+    for (std::vector<std::string>::const_iterator it = g_unknown_funclist.begin(); it != g_unknown_funclist.end(); ++it, ++i) {
+        if (funcname == *it) {
+            funcname_id = i;
+            return true;
+        }
+    }
     std::cerr << "Unknown funcname=" << funcname << "\n";
+    g_unknown_funclist.push_back(funcname);
+    funcname_id = i;
     return false;
 }
 
@@ -432,7 +449,7 @@ void plot_sequential(std::ostream& os)
     plot_funcname_iteration(os, filter_sequential, plot_data_bandwidth);
 
     P("set key top left");
-    P("set title '" << g_hostname << " - One Thread Memory Latency'");
+    P("set title '" << g_hostname << " - One Thread Memory Latency (Access Time)'");
     P("set ylabel 'Access Time [ns]'");
     plot_funcname_iteration(os, filter_sequential, plot_data_latency);
 
@@ -557,23 +574,23 @@ void plot_parallel_speedup_bandwidth(std::ostream& os, const std::string& funcna
 void plot_parallel_funcname(std::ostream& os, const std::string& funcname)
 {
     P("set key top right");
-    P("set title '" << g_hostname << " - Memory Bandwidth - " << funcname);
+    P("set title '" << g_hostname << " - Parallel Memory Bandwidth - " << funcname);
     P("set ylabel 'Bandwidth [GiB/s]'");
     plot_parallel_iteration(os, funcname, plot_data_bandwidth);
 
     P("set key top left");
-    P("set title '" << g_hostname << " - Memory Latency - " << funcname);
+    P("set title '" << g_hostname << " - Parallel Memory Access Time - " << funcname);
     P("set ylabel 'Access Time [ns]'");
     plot_parallel_iteration(os, funcname, plot_data_latency);
 
     P("set key top right");
-    P("set title '" << g_hostname << " - Speedup of Memory Bandwidth - " << funcname);
+    P("set title '" << g_hostname << " - Speedup of Parallel Memory Bandwidth - " << funcname);
     P("set ylabel 'Bandwidth Speedup [1]'");
     double avgspeedup;
     plot_parallel_speedup_bandwidth(os, funcname, avgspeedup);
 
     // replot last plot with other yrange scale
-    P("set title '" << g_hostname << " - Speedup of Memory Bandwidth (enlarged) - " << funcname);
+    P("set title '" << g_hostname << " - Speedup of Parallel Memory Bandwidth (enlarged) - " << funcname);
     P("set yrange [*:" << avgspeedup << "]");
     plot_parallel_speedup_bandwidth(os, funcname, avgspeedup);
 
@@ -588,11 +605,14 @@ void plot_parallel(std::ostream& os)
     {
         plot_parallel_funcname(os,funclist[i]);
     }
+    for (std::vector<std::string>::const_iterator it = g_unknown_funclist.begin(); it != g_unknown_funclist.end(); ++it) {
+        plot_parallel_funcname(os, *it);
+    }
 }
 
 void output_gnuplot(std::ostream& os)
 {
-    P("set terminal pdf size 28cm,19.6cm linewidth 2.0 font \"Arial,18\"");
+    P("set terminal pdf size 28cm,19.6cm linewidth 2.0 font \"Arial,18\" enhanced");
     P("set output '" << g_gnuplot_output << "'");
     P("");
     P("set pointsize 0.7");
