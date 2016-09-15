@@ -67,10 +67,28 @@ HAVE_POSIX_MEMALIGN=0
 AC_CHECK_LIB(c, posix_memalign, [HAVE_POSIX_MEMALIGN=1])
 AC_DEFINE_UNQUOTED(HAVE_POSIX_MEMALIGN, $HAVE_POSIX_MEMALIGN)
 
-AC_CHECK_LIB(numa, numa_available,
-  [LIBS="$LIBS -lnuma"],
-  [AC_MSG_ERROR(numa library needed!)]
-)
+# enable NUMA aware allocations
+
+AC_ARG_ENABLE(numa,
+    AS_HELP_STRING([--enable-numa],
+                   [Build with libnuma @<:@default=check@:>@]),
+    [ case "${enableval}" in
+      yes)
+          AC_CHECK_LIB(numa, numa_available,
+              [AC_DEFINE(HAVE_NUMA)
+               LIBS="$LIBS -lnuma"],
+              [AC_MSG_ERROR(numa library required!)]
+              )
+      ;;
+      no) ;;
+      *) AC_MSG_ERROR(bad value ${enableval} for --enable-numa) ;;
+      esac ],
+    [ AC_CHECK_LIB(numa, numa_available,
+          [AC_DEFINE(HAVE_NUMA)
+           LIBS="$LIBS -lnuma"],
+          [AC_MSG_WARN(numa library not found!)]
+          )
+    ])
 
 # transform Makefiles
 

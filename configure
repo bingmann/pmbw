@@ -689,6 +689,7 @@ enable_option_checking
 enable_silent_rules
 enable_maintainer_mode
 enable_dependency_tracking
+enable_numa
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1327,6 +1328,7 @@ Optional Features:
                           do not reject slow dependency extractors
   --disable-dependency-tracking
                           speeds up one-time build
+  --enable-numa           Build with libnuma [default=check]
 
 Some influential environment variables:
   CXX         C++ compiler command
@@ -3499,7 +3501,13 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for numa_available in -lnuma" >&5
+# enable NUMA aware allocations
+
+# Check whether --enable-numa was given.
+if test "${enable_numa+set}" = set; then :
+  enableval=$enable_numa;  case "${enableval}" in
+      yes)
+          { $as_echo "$as_me:${as_lineno-$LINENO}: checking for numa_available in -lnuma" >&5
 $as_echo_n "checking for numa_available in -lnuma... " >&6; }
 if ${ac_cv_lib_numa_numa_available+:} false; then :
   $as_echo_n "(cached) " >&6
@@ -3536,9 +3544,65 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_numa_numa_available" >&5
 $as_echo "$ac_cv_lib_numa_numa_available" >&6; }
 if test "x$ac_cv_lib_numa_numa_available" = xyes; then :
-  LIBS="$LIBS -lnuma"
+  $as_echo "#define HAVE_NUMA 1" >>confdefs.h
+
+               LIBS="$LIBS -lnuma"
 else
-  as_fn_error $? "numa library needed!" "$LINENO" 5
+  as_fn_error $? "numa library required!" "$LINENO" 5
+
+fi
+
+      ;;
+      no) ;;
+      *) as_fn_error $? "bad value ${enableval} for --enable-numa" "$LINENO" 5 ;;
+      esac
+else
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for numa_available in -lnuma" >&5
+$as_echo_n "checking for numa_available in -lnuma... " >&6; }
+if ${ac_cv_lib_numa_numa_available+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lnuma  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char numa_available ();
+int
+main ()
+{
+return numa_available ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_numa_numa_available=yes
+else
+  ac_cv_lib_numa_numa_available=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_numa_numa_available" >&5
+$as_echo "$ac_cv_lib_numa_numa_available" >&6; }
+if test "x$ac_cv_lib_numa_numa_available" = xyes; then :
+  $as_echo "#define HAVE_NUMA 1" >>confdefs.h
+
+           LIBS="$LIBS -lnuma"
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: numa library not found!" >&5
+$as_echo "$as_me: WARNING: numa library not found!" >&2;}
+
+fi
+
 
 fi
 

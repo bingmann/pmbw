@@ -9,7 +9,7 @@
  * outputted to "stats.txt" which can then be processed using other tools.
  *
  ******************************************************************************
- * Copyright (C) 2013 Timo Bingmann <tb@panthema.net>
+ * Copyright (C) 2013-2016 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -25,26 +25,29 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-#include <iostream>
-#include <sstream>
+#include <algorithm>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
+#include <sstream>
 #include <vector>
-#include <algorithm>
 
-#include <stdlib.h>
-#include <inttypes.h>
-#include <string.h>
 #include <assert.h>
-#include <unistd.h>
+#include <inttypes.h>
+#include <stdlib.h>
+#include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <pthread.h>
 #include <malloc.h>
-#include <numa.h>
 
 #if ON_WINDOWS
 #include <windows.h>
+#endif
+
+#if HAVE_NUMA
+#include <numa.h>
 #endif
 
 // -----------------------------------------------------------------------------
@@ -82,10 +85,16 @@ const char* gopt_output_file = "stats.txt";
 #define ERR(x)  do { std::cerr << x << std::endl; } while(0)
 #define ERRX(x)  do { (std::cerr << x).flush(); } while(0)
 
+#if HAVE_NUMA
 // allocated memory area, total size and size per NUMA node
 std::vector<char*> g_memarea;
 size_t g_memsize = 0, g_memfree = 0;
 size_t g_memsize_node = 0;
+#else
+// allocated memory area and size
+char* g_memarea = NULL;
+size_t g_memsize = 0;
+#endif
 
 // global test function currently run
 const struct TestFunction* g_func = NULL;
@@ -93,6 +102,7 @@ const struct TestFunction* g_func = NULL;
 // number of physical cpus detected
 int g_physical_cpus;
 
+#if HAVE_NUMA
 // number of NUMA nodes detected
 int g_numa_nodes;
 
@@ -101,6 +111,7 @@ std::vector<uint64_t> g_numa_nodesize, g_numa_nodefree;
 
 // number of NUMA nodes to hop for memory area
 int g_numa_hop = 0;
+#endif
 
 // hostname
 char g_hostname[256];
@@ -490,6 +501,7 @@ void* thread_master(void* cookie)
     int thread_num = *((int*)cookie);
     delete (int*)cookie;
 
+#if HAVE_NUMA
     // set NUMA node for task and prefered allocation
     int node_num = thread_num % g_numa_nodes;
     int node_offset = thread_num / g_numa_nodes;
@@ -497,6 +509,7 @@ void* thread_master(void* cookie)
 
     node_num = (node_num + g_numa_hop) % g_numa_nodes; // but maybe access another NUMA node's memory
     numa_set_preferred(node_num);
+#endif
 
     // initial repeat factor is just an approximate B/s bandwidth
     uint64_t factor = 1024*1024*1024;
@@ -546,7 +559,11 @@ void* thread_master(void* cookie)
             uint64_t testaccess = testsize * g_repeats / g_func->access_offset;
 
             // memarea
+#if HAVE_NUMA
             char* memarea = g_memarea[node_num] + node_offset * g_thrsize_spaced;
+#else
+            char* memarea = g_memarea + thread_num * g_thrsize_spaced;
+#endif
 
             ERR("Running"
                 << " nthreads=" << g_nthreads
@@ -615,7 +632,9 @@ void* thread_master(void* cookie)
                        << "version=" << PACKAGE_VERSION << '\t'
                        << "funcname=" << g_func->name << '\t'
                        << "nthreads=" << g_nthreads << '\t'
+#if HAVE_NUMA
                        << "numahop=" << g_numa_hop << '\t'
+#endif
                        << "areasize=" << *areasize << '\t'
                        << "threadsize=" << g_thrsize << '\t'
                        << "testsize=" << testsize << '\t'
@@ -648,6 +667,7 @@ void* thread_worker(void* cookie)
     int thread_num = *((int*)cookie);
     delete (int*)cookie;
 
+#if HAVE_NUMA
     // set NUMA node for task and prefered allocation
     int node_num = thread_num % g_numa_nodes;
     int node_offset = thread_num / g_numa_nodes;
@@ -655,6 +675,7 @@ void* thread_worker(void* cookie)
 
     node_num = (node_num + g_numa_hop) % g_numa_nodes; // but maybe access another NUMA node's memory
     numa_set_preferred(node_num);
+#endif
 
     while (1)
     {
@@ -664,7 +685,11 @@ void* thread_worker(void* cookie)
         if (g_done) break;
 
         // memarea
+#if HAVE_NUMA
         char* memarea = g_memarea[node_num] + node_offset * g_thrsize_spaced;
+#else
+        char* memarea = g_memarea + thread_num * g_thrsize_spaced;
+#endif
 
         // create cyclic permutation for each thread
         if (g_func->make_permutation)
@@ -744,6 +769,9 @@ void print_usage(const char* prog)
     ERR("Usage: " << prog << " [options]" << std::endl
         << "Options:" << std::endl
         << "  -f <match>     Run only benchmarks containing this substring, can be used multile times. Try \"list\"." << std::endl
+#if HAVE_NUMA
+        << "  -H             Test memory bandwidth across all NUMA hops." << std::endl
+#endif
         << "  -M <size>      Limit the maximum amount of memory allocated at startup [byte]." << std::endl
         << "  -o <file>      Write the results to <file> instead of stats.txt." << std::endl
         << "  -p <nthrs>     Run benchmarks with at least this thread count." << std::endl
@@ -759,8 +787,9 @@ int main(int argc, char* argv[])
     // *** parse command line options
 
     int opt;
+    bool opt_numa_hops = false;
 
-    while ( (opt = getopt(argc, argv, "hf:M:o:p:P:Qs:S:")) != -1 )
+    while ( (opt = getopt(argc, argv, "hf:HM:o:p:P:Qs:S:")) != -1 )
     {
         switch (opt) {
         default:
@@ -788,6 +817,11 @@ int main(int argc, char* argv[])
             gopt_funcfilter.push_back(optarg);
 
             ERR("Running only functions containing '" << optarg << "'");
+            break;
+
+        case 'H':
+            opt_numa_hops = true;
+            ERR("Testing memory bandwidth across NUMA hops.");
             break;
 
         case 'M':
@@ -873,17 +907,24 @@ int main(int argc, char* argv[])
 
     // *** allocate memory for tests
 
+    /**************************************************************************/
+    // NUMA Allocation
+
+#if HAVE_NUMA
+
     if (numa_available() != 0) {
         ERR("NUMA not available!");
         return 0;
     }
 
+    // let libnuma die on errors
     numa_exit_on_error = 1;
 
     g_physical_cpus = numa_num_configured_cpus();
     g_numa_nodes = numa_num_configured_nodes();
 
-    ERR("Detected " << g_numa_nodes << " NUMA nodes with and " << g_physical_cpus << " CPUs. ");
+    ERR("Detected " << g_numa_nodes << " NUMA nodes with and "
+        << g_physical_cpus << " CPUs. ");
 
     // detect active NUMA nodes sizes
     for (int nn = 0; nn < g_numa_nodes; ++nn)
@@ -893,44 +934,38 @@ int main(int argc, char* argv[])
         g_numa_nodesize.push_back(numa_node_size64(nn, &freep));
         g_numa_nodefree.push_back(freep);
 
-        ERR(nn << " [ " << g_numa_nodefree.back() / 1024/1024 <<
-            " / " << g_numa_nodesize.back() / 1024/1024 << " MiB = " <<
+        ERR(nn << " [ " << g_numa_nodefree.back() / 1024 / 1024 <<
+            " / " << g_numa_nodesize.back() / 1024 / 1024 << " MiB = " <<
             (100.0 * g_numa_nodefree.back() / g_numa_nodesize.back()) << "% ]");
-    // allocate memory area
-
-#if HAVE_POSIX_MEMALIGN
 
         g_memsize += g_numa_nodesize.back();
         g_memfree += g_numa_nodefree.back();
     }
 
-    ERR("total [ " << g_memfree / 1024/1024 <<
-        " / " << g_memsize / 1024/1024 << " MiB = " <<
+    ERR("total [ " << g_memfree / 1024 / 1024 <<
+        " / " << g_memsize / 1024 / 1024 << " MiB = " <<
         (100.0 * g_memfree / g_memsize) << "% ]");
 
     // find maximum allocation over all NUMA nodes
-    g_memsize_node = *std::min_element(g_numa_nodefree.begin(), g_numa_nodefree.end());
+    g_memsize_node = *std::min_element(
+        g_numa_nodefree.begin(), g_numa_nodefree.end());
 
     // limit allocated memory via command line
     if (gopt_memlimit && gopt_memlimit < g_memsize_node)
         g_memsize_node = gopt_memlimit;
 
     // allocate memory area on each NUMA node
-    ERR("Allocating " << g_memsize_node / 1024/1024 << " MiB on each NUMA node for testing.");
+    ERR("Allocating " << g_memsize_node / 1024 / 1024 <<
+        " MiB on each NUMA node for testing.");
+
     for (int nn = 0; nn < g_numa_nodes; ++nn)
     {
         void* mem = numa_alloc_onnode(g_memsize_node, nn);
         g_memarea.push_back( (char*)mem );
     }
 
-#else
-
-    g_memarea = (char*)malloc(g_memsize);
-
-#endif
-
     // fill memory with junk, but this allocates physical memory
-    ERR("Filling " << g_memsize_node / 1024/1024 << " MiB on each NUMA node.");
+    ERR("Filling " << g_memsize_node / 1024 / 1024 << " MiB on each NUMA node.");
     for (int nn = 0; nn < g_numa_nodes; ++nn)
     {
         double ts1 = timestamp();
@@ -940,6 +975,65 @@ int main(int argc, char* argv[])
         ERRX(std::setprecision(2) << (ts2 - ts1) << "s, ");
     }
     ERR("done");
+
+#else // !HAVE_NUMA
+    /**************************************************************************/
+    // Non-NUMA Allocation
+
+#if !ON_WINDOWS
+
+    size_t physical_mem = sysconf(_SC_PHYS_PAGES) * (size_t)sysconf(_SC_PAGESIZE);
+    g_physical_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+
+#else
+
+    MEMORYSTATUSEX memstx;
+    memstx.dwLength = sizeof(memstx);
+    GlobalMemoryStatusEx(&memstx);
+
+    size_t physical_mem = memstx.ullTotalPhys;
+
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo( &sysinfo );
+
+    g_physical_cpus = sysinfo.dwNumberOfProcessors;
+#endif
+
+    ERR("Detected " << physical_mem / 1024 / 1024 << " MiB physical RAM and " <<
+        g_physical_cpus << " CPUs. " << std::endl);
+
+
+    // limit allocated memory via command line
+    if (gopt_memlimit && gopt_memlimit < physical_mem)
+        physical_mem = gopt_memlimit;
+
+    // round down memory to largest power of two, still fitting in physical RAM
+    g_memsize = round_up_power2(physical_mem) / 2;
+
+    // due to roundup in loop to next cache-line size, add one extra cache-line per thread
+    g_memsize += g_physical_cpus * 256;
+
+    ERR("Allocating " << g_memsize / 1024 / 1024 << " MiB for testing.");
+
+    // allocate memory area
+
+#if HAVE_POSIX_MEMALIGN
+
+    if (posix_memalign((void**)&g_memarea, 32, g_memsize) != 0) {
+        ERR("Error allocating memory.");
+        return -1;
+    }
+
+#else
+
+    g_memarea = (char*)malloc(g_memsize);
+
+#endif
+
+    // fill memory with junk, but this allocates physical memory
+    memset(g_memarea, 1, g_memsize);
+
+#endif // !HAVE_NUMA
 
     // *** perform memory tests
 
@@ -956,17 +1050,34 @@ int main(int argc, char* argv[])
             continue;
         }
 
-        for (int hop = 0; hop < g_numa_nodes; ++hop)
+#if HAVE_NUMA
+        if (opt_numa_hops)
         {
-            g_numa_hop = hop;
+            for (int hop = 0; hop < g_numa_nodes; ++hop)
+            {
+                g_numa_hop = hop;
+                testfunc(tf);
+            }
+        }
+        else
+        {
+            g_numa_hop = 0;
             testfunc(tf);
         }
+#else
+        (void)opt_numa_hops;
+        testfunc(tf);
+#endif
     }
 
     // cleanup
 
+#if HAVE_NUMA
     for (int nn = 0; nn < g_numa_nodes; ++nn)
         numa_free(g_memarea[nn], g_memsize_node);
+#else
+    free(g_memarea);
+#endif
 
     for (size_t i = 0; i < g_testlist.size(); ++i)
         delete g_testlist[i];
