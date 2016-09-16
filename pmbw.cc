@@ -110,6 +110,9 @@ int g_numa_nodes;
 // size of NUMA nodes and free space
 std::vector<uint64_t> g_numa_nodesize, g_numa_nodefree;
 
+// CPU ids on NUMA nodes
+std::vector<std::vector<int> > g_numa_cpuset;
+
 // number of NUMA nodes to hop for memory area
 int g_numa_hop = 0;
 #endif
@@ -519,16 +522,18 @@ void* thread_master(void* cookie)
     delete (int*)cookie;
 
 #if HAVE_NUMA
-    // set NUMA node for task and prefered allocation
+    // set NUMA node for task and preferred allocation
     int node_num = thread_num % g_numa_nodes;
     int node_offset = thread_num / g_numa_nodes;
-    numa_run_on_node(node_num);
+
+    const std::vector<int>& cpuset = g_numa_cpuset[node_num];
+    pin_self_to_core(cpuset[node_offset % cpuset.size()]);
 
     // but maybe access another NUMA node's memory
     node_num = (node_num + g_numa_hop) % g_numa_nodes;
-    numa_set_preferred(node_num);
-#endif
+#else
     pin_self_to_core(thread_num);
+#endif
 
     // initial repeat factor is just an approximate B/s bandwidth
     uint64_t factor = 1024*1024*1024;
@@ -690,16 +695,18 @@ void* thread_worker(void* cookie)
     delete (int*)cookie;
 
 #if HAVE_NUMA
-    // set NUMA node for task and prefered allocation
+    // set NUMA node for task and preferred allocation
     int node_num = thread_num % g_numa_nodes;
     int node_offset = thread_num / g_numa_nodes;
-    numa_run_on_node(node_num);
+
+    const std::vector<int>& cpuset = g_numa_cpuset[node_num];
+    pin_self_to_core(cpuset[node_offset % cpuset.size()]);
 
     // but maybe access another NUMA node's memory
     node_num = (node_num + g_numa_hop) % g_numa_nodes;
-    numa_set_preferred(node_num);
-#endif
+#else
     pin_self_to_core(thread_num);
+#endif
 
     while (1)
     {
@@ -950,6 +957,17 @@ int main(int argc, char* argv[])
     ERR("Detected " << g_numa_nodes << " NUMA nodes with and "
         << g_physical_cpus << " CPUs. ");
 
+    // find CPU ids on active NUMA nodes
+    g_numa_cpuset.resize(g_numa_nodes);
+
+    for (int c = 0; c < g_physical_cpus; ++c) {
+        int nn = numa_node_of_cpu(c);
+        if (nn >= g_numa_nodes)
+            ERR("CPU " << c << " on NUMA node " << nn << " >= max nodes");
+        else
+            g_numa_cpuset[nn].push_back(c);
+    }
+
     // detect active NUMA nodes sizes
     for (int nn = 0; nn < g_numa_nodes; ++nn)
     {
@@ -958,9 +976,16 @@ int main(int argc, char* argv[])
         g_numa_nodesize.push_back(numa_node_size64(nn, &freep));
         g_numa_nodefree.push_back(freep);
 
-        ERR(nn << " [ " << g_numa_nodefree.back() / 1024 / 1024 <<
-            " / " << g_numa_nodesize.back() / 1024 / 1024 << " MiB = " <<
-            (100.0 * g_numa_nodefree.back() / g_numa_nodesize.back()) << "% ]");
+        ERRX(nn << " [ " << g_numa_nodefree.back() / 1024 / 1024 <<
+             " / " << g_numa_nodesize.back() / 1024 / 1024 << " MiB = " <<
+             (100.0 * g_numa_nodefree.back() / g_numa_nodesize.back()) << "% ]"
+             " [cores");
+
+        for (size_t i = 0; i < g_numa_cpuset[nn].size(); ++i) {
+            ERRX(" " << g_numa_cpuset[nn][i]);
+        }
+
+        ERR(" ]");
 
         g_memsize += g_numa_nodesize.back();
         g_memfree += g_numa_nodefree.back();
