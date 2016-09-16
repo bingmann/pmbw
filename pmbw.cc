@@ -510,7 +510,8 @@ void* thread_master(void* cookie)
     int node_offset = thread_num / g_numa_nodes;
     numa_run_on_node(node_num);
 
-    node_num = (node_num + g_numa_hop) % g_numa_nodes; // but maybe access another NUMA node's memory
+    // but maybe access another NUMA node's memory
+    node_num = (node_num + g_numa_hop) % g_numa_nodes;
     numa_set_preferred(node_num);
 #endif
 
@@ -530,36 +531,39 @@ void* thread_master(void* cookie)
             continue;
         }
 
+        // divide area by thread number
+        g_thrsize = *areasize / g_nthreads;
+
+        // unrolled tests do up to 16 accesses without loop check, thus align
+        // upward to next multiple of unroll_factor*size (e.g. 128 bytes for
+        // 16-times unrolled 64-bit access)
+        const uint64_t unrollsize = g_func->unroll_factor * g_func->bytes_per_access;
+        g_thrsize = ((g_thrsize + unrollsize - 1) / unrollsize) * unrollsize;
+
+        // total size tested
+        const uint64_t testsize = g_thrsize * g_nthreads;
+
+        // skip if tests don't fit into memory
+        if (g_memsize < testsize) continue;
+#if HAVE_NUMA
+        if (g_memsize_node < g_thrsize) continue;
+#endif
+
+        // due to cache thrashing in adjacent cache lines, space out threads's
+        // test areas
+        g_thrsize_spaced = std::max<uint64_t>(g_thrsize, 4*1024*1024 + 16*1024);
+
+        // skip if tests don't fit into memory
+        if (g_memsize < g_thrsize_spaced * g_nthreads) continue;
+
         for (unsigned int round = 0; round < 1; ++round)
         {
-            // divide area by thread number
-            g_thrsize = *areasize / g_nthreads;
-
-            // unrolled tests do up to 16 accesses without loop check, thus align
-            // upward to next multiple of unroll_factor*size (e.g. 128 bytes for
-            // 16-times unrolled 64-bit access)
-            uint64_t unrollsize = g_func->unroll_factor * g_func->bytes_per_access;
-            g_thrsize = ((g_thrsize + unrollsize - 1) / unrollsize) * unrollsize;
-
-            // total size tested
-            uint64_t testsize = g_thrsize * g_nthreads;
-
-            // skip if tests don't fit into memory
-            if (g_memsize < testsize) continue;
-
-            // due to cache thrashing in adjacent cache lines, space out
-            // threads's test areas
-            g_thrsize_spaced = std::max<uint64_t>(g_thrsize, 4*1024*1024 + 16*1024);
-
-            // skip if tests don't fit into memory
-            if (g_memsize < g_thrsize_spaced * g_nthreads) continue;
-
             g_repeats = (factor + g_thrsize-1) / g_thrsize;         // round up
 
             // volume in bytes tested
-            uint64_t testvol = testsize * g_repeats * g_func->bytes_per_access / g_func->access_offset;
+            const uint64_t testvol = testsize * g_repeats * g_func->bytes_per_access / g_func->access_offset;
             // number of accesses in test
-            uint64_t testaccess = testsize * g_repeats / g_func->access_offset;
+            const uint64_t testaccess = testsize * g_repeats / g_func->access_offset;
 
             // memarea
 #if HAVE_NUMA
@@ -676,7 +680,8 @@ void* thread_worker(void* cookie)
     int node_offset = thread_num / g_numa_nodes;
     numa_run_on_node(node_num);
 
-    node_num = (node_num + g_numa_hop) % g_numa_nodes; // but maybe access another NUMA node's memory
+    // but maybe access another NUMA node's memory
+    node_num = (node_num + g_numa_hop) % g_numa_nodes;
     numa_set_preferred(node_num);
 #endif
 
