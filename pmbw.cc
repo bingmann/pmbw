@@ -26,16 +26,17 @@
  *****************************************************************************/
 
 #include <algorithm>
+#include <cassert>
+#include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <vector>
 
-#include <assert.h>
+#include <errno.h>
 #include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -354,6 +355,19 @@ static inline bool match_funcfilter(const char* funcname)
     return false;
 }
 
+// pin this thread to the core, where cores are numbered 0 .. n-1
+void pin_self_to_core(int core_id)
+{
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_id, &cpuset);
+
+    pthread_t current_thread = pthread_self();
+    if (pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset) != 0)
+        ERRX("Cannot set thread affinity for thread " << core_id << ": "
+             << strerror(errno));
+}
+
 // -----------------------------------------------------------------------------
 // --- List of Array Sizes to Test
 
@@ -514,6 +528,7 @@ void* thread_master(void* cookie)
     node_num = (node_num + g_numa_hop) % g_numa_nodes;
     numa_set_preferred(node_num);
 #endif
+    pin_self_to_core(thread_num);
 
     // initial repeat factor is just an approximate B/s bandwidth
     uint64_t factor = 1024*1024*1024;
@@ -684,6 +699,7 @@ void* thread_worker(void* cookie)
     node_num = (node_num + g_numa_hop) % g_numa_nodes;
     numa_set_preferred(node_num);
 #endif
+    pin_self_to_core(thread_num);
 
     while (1)
     {
