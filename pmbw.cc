@@ -536,18 +536,18 @@ void* thread_master(void* cookie)
 #endif
 
     // initial repeat factor is just an approximate B/s bandwidth
-    uint64_t factor = 1024*1024*1024;
+    uint64_t factor = 1024 * 1024 * 1024;
 
     for (const uint64_t* areasize = areasize_list; *areasize; ++areasize)
     {
         if (*areasize < gopt_sizelimit_min && gopt_sizelimit_min != 0) {
-            ERR("Skipping " << g_func->name << " test with " << *areasize
-                << " minimum array size due to -s " << gopt_sizelimit_min << ".");
+            ERR("Skipping " << g_func->name << " test with " << *areasize <<
+                " minimum array size due to -s " << gopt_sizelimit_min << ".");
             continue;
         }
         if (*areasize > gopt_sizelimit_max && gopt_sizelimit_max != 0) {
-            ERR("Skipping " << g_func->name << " test with " << *areasize
-                << " maximum array size due to -S " << gopt_sizelimit_max << ".");
+            ERR("Skipping " << g_func->name << " test with " << *areasize <<
+                " maximum array size due to -S " << gopt_sizelimit_max << ".");
             continue;
         }
 
@@ -571,7 +571,8 @@ void* thread_master(void* cookie)
 
         // due to cache thrashing in adjacent cache lines, space out threads's
         // test areas
-        g_thrsize_spaced = std::max<uint64_t>(g_thrsize, 4*1024*1024 + 16*1024);
+        g_thrsize_spaced = std::max<uint64_t>(
+            g_thrsize, 4 * 1024 * 1024 + 16 * 1024);
 
         // skip if tests don't fit into memory
         if (g_memsize < g_thrsize_spaced * g_nthreads) continue;
