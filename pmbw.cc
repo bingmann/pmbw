@@ -9,7 +9,7 @@
  * outputted to "stats.txt" which can then be processed using other tools.
  *
  ******************************************************************************
- * Copyright (C) 2013-2016 Timo Bingmann <tb@panthema.net>
+ * Copyright (C) 2013-2017 Timo Bingmann <tb@panthema.net>
  *
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -952,6 +952,11 @@ int main(int argc, char* argv[])
     // let libnuma die on errors
     numa_exit_on_error = 1;
 
+    // make libnuma strict about allocations
+    numa_set_strict(1);
+    numa_set_bind_policy(1);
+
+    // query libnuma
     g_physical_cpus = numa_num_configured_cpus();
     g_numa_nodes = numa_num_configured_nodes();
 
