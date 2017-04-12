@@ -525,6 +525,7 @@ void* thread_master(void* cookie)
     // set NUMA node for task and preferred allocation
     int node_num = thread_num % g_numa_nodes;
     int node_offset = thread_num / g_numa_nodes;
+    int threads_per_node_ceil = (g_nthreads + g_numa_nodes - 1) / g_numa_nodes;
 
     const std::vector<int>& cpuset = g_numa_cpuset[node_num];
     pin_self_to_core(cpuset[node_offset % cpuset.size()]);
@@ -557,7 +558,8 @@ void* thread_master(void* cookie)
         // unrolled tests do up to 16 accesses without loop check, thus align
         // upward to next multiple of unroll_factor*size (e.g. 128 bytes for
         // 16-times unrolled 64-bit access)
-        const uint64_t unrollsize = g_func->unroll_factor * g_func->bytes_per_access;
+        const uint64_t unrollsize =
+            g_func->unroll_factor * g_func->bytes_per_access;
         g_thrsize = ((g_thrsize + unrollsize - 1) / unrollsize) * unrollsize;
 
         // total size tested
@@ -576,15 +578,20 @@ void* thread_master(void* cookie)
 
         // skip if tests don't fit into memory
         if (g_memsize < g_thrsize_spaced * g_nthreads) continue;
+#if HAVE_NUMA
+        if (g_memsize_node < g_thrsize_spaced * threads_per_node_ceil) continue;
+#endif
 
         for (unsigned int round = 0; round < 1; ++round)
         {
             g_repeats = (factor + g_thrsize-1) / g_thrsize;         // round up
 
             // volume in bytes tested
-            const uint64_t testvol = testsize * g_repeats * g_func->bytes_per_access / g_func->access_offset;
+            const uint64_t testvol =
+                testsize * g_repeats * g_func->bytes_per_access / g_func->access_offset;
             // number of accesses in test
-            const uint64_t testaccess = testsize * g_repeats / g_func->access_offset;
+            const uint64_t testaccess =
+                testsize * g_repeats / g_func->access_offset;
 
             // memarea
 #if HAVE_NUMA
@@ -635,7 +642,8 @@ void* thread_master(void* cookie)
                 // test ran for less than one second, repeat test and scale
                 // repeat factor
                 factor = g_thrsize * g_repeats * g_avg_time / runtime;
-                ERR("run time = " << runtime << " -> rerunning test with repeat factor=" << factor);
+                ERR("run time = " << runtime
+                    << " -> rerunning test with repeat factor=" << factor);
 
                 --round;     // redo this areasize
             }
@@ -645,7 +653,8 @@ void* thread_master(void* cookie)
                 // next test will take approximately g_avg_time sec
 
                 factor = g_thrsize * g_repeats * g_avg_time / runtime;
-                ERR("run time = " << runtime << " -> next test with repeat factor=" << factor);
+                ERR("run time = " << runtime
+                    << " -> next test with repeat factor=" << factor);
 
                 std::ostringstream result;
                 result << "RESULT\t";
@@ -1028,7 +1037,8 @@ int main(int argc, char* argv[])
 
     // allocate memory area on each NUMA node
     ERR("Allocating " << g_memsize_node / 1024 / 1024 <<
-        " MiB on each NUMA node for testing.");
+        " MiB on each NUMA node for testing, in total " <<
+        (g_memsize_node * g_numa_nodes) / 1024 / 1024 << " MiB.");
 
     for (int nn = 0; nn < g_numa_nodes; ++nn)
     {
