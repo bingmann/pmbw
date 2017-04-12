@@ -1057,7 +1057,6 @@ int main(int argc, char* argv[])
     ERR("Detected " << physical_mem / 1024 / 1024 << " MiB physical RAM and " <<
         g_physical_cpus << " CPUs. " << std::endl);
 
-
     // limit allocated memory via command line
     if (gopt_memlimit && gopt_memlimit < physical_mem)
         physical_mem = gopt_memlimit;
@@ -1071,19 +1070,7 @@ int main(int argc, char* argv[])
     ERR("Allocating " << g_memsize / 1024 / 1024 << " MiB for testing.");
 
     // allocate memory area
-
-#if HAVE_POSIX_MEMALIGN
-
-    if (posix_memalign((void**)&g_memarea, 32, g_memsize) != 0) {
-        ERR("Error allocating memory.");
-        return -1;
-    }
-
-#else
-
     g_memarea = (char*)malloc(g_memsize);
-
-#endif
 
     // fill memory with junk, but this allocates physical memory
     memset(g_memarea, 1, g_memsize);
