@@ -786,6 +786,23 @@ void testfunc(const TestFunction* func)
     }
 }
 
+#if HAVE_NUMA
+void* thread_filler(void* cookie)
+{
+    // this weirdness is because (void*) cannot be cast to int and back.
+    int node_num = *((int*)cookie);
+    delete (int*)cookie;
+
+    double ts1 = timestamp();
+    memset(g_memarea[node_num], 1, g_memsize_node);
+    double ts2 = timestamp();
+    ERRX("node " << node_num << ": "
+         <<std::setprecision(2) << (ts2 - ts1) << "s, ");
+
+    return NULL;
+}
+#endif
+
 static inline uint64_t round_up_power2(uint64_t v)
 {
     v--;
@@ -1021,15 +1038,19 @@ int main(int argc, char* argv[])
 
     // fill memory with junk, but this allocates physical memory
     ERR("Filling " << g_memsize_node / 1024 / 1024 << " MiB on each NUMA node.");
-    for (int nn = 0; nn < g_numa_nodes; ++nn)
     {
         double ts1 = timestamp();
-        ERRX("node " << nn << ": ");
-        memset(g_memarea[nn], 1, g_memsize_node);
+
+        pthread_t thr[g_numa_nodes];
+        for (int nn = 0; nn < g_numa_nodes; ++nn)
+            pthread_create(&thr[nn], NULL, thread_filler, new int(nn));
+
+        for (int nn = 0; nn < g_numa_nodes; ++nn)
+            pthread_join(thr[nn], NULL);
+
         double ts2 = timestamp();
-        ERRX(std::setprecision(2) << (ts2 - ts1) << "s, ");
+        ERR("done in " << std::setprecision(2) << (ts2 - ts1) << "s.");
     }
-    ERR("done");
 
 #else // !HAVE_NUMA
     /**************************************************************************/
