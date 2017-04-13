@@ -142,7 +142,7 @@ struct TestFunction
     // bytes skipped foward to next access point (including bytes_per_access)
     unsigned int access_offset;
 
-    // number of accesses before and after
+    // number of accesses before the loop condition is checked
     unsigned int unroll_factor;
 
     // fill the area with a permutation before calling the func
@@ -177,9 +177,10 @@ TestFunction::TestFunction(const char* n, testfunc_type f, const char* cf,
     static const struct TestFunction* _##func##_register =       \
         new TestFunction(#func,func,cpufeat,bytes,offset,unroll,false);
 
-#define REGISTER_PERM(func, bytes)                              \
-    static const struct TestFunction* _##func##_register =       \
-        new TestFunction(#func,func,NULL,bytes,bytes,1,true);
+#define REGISTER_PERM(func, bytes, unroll)                         \
+    static const struct TestFunction* _##func##_register =         \
+        new TestFunction(#func,func,NULL,bytes,bytes,unroll,true);
+
 
 // -----------------------------------------------------------------------------
 // --- Test Functions with Inline Assembler Loops
@@ -556,7 +557,7 @@ void* thread_master(void* cookie)
         g_thrsize = *areasize / g_nthreads;
 
         // unrolled tests do up to 16 accesses without loop check, thus align
-        // upward to next multiple of unroll_factor*size (e.g. 128 bytes for
+        // upward to next multiple of unroll_factor * size (e.g. 128 bytes for
         // 16-times unrolled 64-bit access)
         const uint64_t unrollsize =
             g_func->unroll_factor * g_func->bytes_per_access;

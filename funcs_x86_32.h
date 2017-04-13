@@ -775,7 +775,7 @@ void cPermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
     while (--repeats != 0);
 }
 
-//REGISTER_PERM(cPermRead32SimpleLoop, 4);
+//REGISTER_PERM(cPermRead32SimpleLoop, /* bytes */ 4, /* unroll */ 1);
 
 // follow 32-bit permutation in a simple loop (Assembler version)
 void PermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
@@ -796,7 +796,7 @@ void PermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
         : "eax", "cc", "memory");
 }
 
-REGISTER_PERM(PermRead32SimpleLoop, 4);
+REGISTER_PERM(PermRead32SimpleLoop, /* bytes */ 4, /* unroll */ 1);
 
 // follow 32-bit permutation in an unrolled loop (Assembler version)
 void PermRead32UnrollLoop(char* memarea, size_t, size_t repeats)
@@ -835,6 +835,6 @@ void PermRead32UnrollLoop(char* memarea, size_t, size_t repeats)
         : "eax", "cc", "memory");
 }
 
-REGISTER_PERM(PermRead32UnrollLoop, 4);
+REGISTER_PERM(PermRead32UnrollLoop, /* bytes */ 4, /* unroll */ 16);
 
 // -----------------------------------------------------------------------------

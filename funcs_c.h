@@ -167,7 +167,7 @@ void cPermRead32SimpleLoop(char* memarea, size_t, size_t repeats)
     while (--repeats != 0);
 }
 
-REGISTER_PERM(cPermRead32SimpleLoop, 4);
+REGISTER_PERM(cPermRead32SimpleLoop, /* bytes */ 4, /* unroll */ 1);
 
 #else
 
@@ -186,7 +186,7 @@ void cPermRead64SimpleLoop(char* memarea, size_t, size_t repeats)
     while (--repeats != 0);
 }
 
-REGISTER_PERM(cPermRead64SimpleLoop, 8);
+REGISTER_PERM(cPermRead64SimpleLoop, /* bytes */ 8, /* unroll */ 1);
 
 #endif
 
