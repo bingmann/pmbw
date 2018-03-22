@@ -45,7 +45,7 @@ The program and code is published under the GNU General Public License v3
 
 The basic idea of measuring memory bandwidth is not new, however, none of the
 existing benchmarks target multi-core parallelism, growing array sizes and
-simple program loops. The [STREAM benchmark](http://www.streambench.org/)
+simple program loops. The [STREAM benchmark](http://www.cs.virginia.edu/stream/)
 allows tuning for specific hardware and is not in assembler
 code. [Zack Smith's bandwidth](http://zsmith.co/bandwidth.html) benchmark is
 limited to sequential bandwidth and was the starting point for designing
