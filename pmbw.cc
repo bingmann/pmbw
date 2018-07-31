@@ -803,6 +803,8 @@ void* thread_filler(void* cookie)
     int node_num = *((int*)cookie);
     delete (int*)cookie;
 
+    numa_run_on_node(node_num);
+
     double ts1 = timestamp();
     memset(g_memarea[node_num], 1, g_memsize_node);
     double ts2 = timestamp();
