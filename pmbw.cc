@@ -527,6 +527,8 @@ void* thread_master(void* cookie)
     int node_num = thread_num % g_numa_nodes;
     int node_offset = thread_num / g_numa_nodes;
     int threads_per_node_ceil = (g_nthreads + g_numa_nodes - 1) / g_numa_nodes;
+    // pin to numa node
+    numa_run_on_node(node_num);
 
     const std::vector<int>& cpuset = g_numa_cpuset[node_num];
     pin_self_to_core(cpuset[node_offset % cpuset.size()]);
@@ -709,6 +711,8 @@ void* thread_worker(void* cookie)
     // set NUMA node for task and preferred allocation
     int node_num = thread_num % g_numa_nodes;
     int node_offset = thread_num / g_numa_nodes;
+    // pin to numa node
+    numa_run_on_node(node_num);
 
     const std::vector<int>& cpuset = g_numa_cpuset[node_num];
     pin_self_to_core(cpuset[node_offset % cpuset.size()]);
@@ -802,6 +806,8 @@ void* thread_filler(void* cookie)
     // this weirdness is because (void*) cannot be cast to int and back.
     int node_num = *((int*)cookie);
     delete (int*)cookie;
+
+    numa_run_on_node(node_num);
 
     double ts1 = timestamp();
     memset(g_memarea[node_num], 1, g_memsize_node);
