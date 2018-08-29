@@ -67,8 +67,8 @@ uint64_t gopt_memlimit = 0;
 // lower and upper limit to number of threads
 int gopt_nthreads_min = 0, gopt_nthreads_max = 0;
 
-// quadraticly increasing number of threads
-bool gopt_nthreads_quadratic = false;
+// exponentially increasing number of threads
+bool gopt_nthreads_exponential = false;
 
 // option to test permutation cycle before measurement
 bool gopt_testcycle = false;
@@ -687,7 +687,7 @@ void testfunc(const TestFunction* func)
         // increase thread count
         if (nthreads >= gopt_nthreads_max) break;
 
-        if (gopt_nthreads_quadratic)
+        if (gopt_nthreads_exponential)
             nthreads = 2 * nthreads;
         else
             nthreads++;
@@ -716,7 +716,7 @@ void print_usage(const char* prog)
         << "  -o <file>      Write the results to <file> instead of stats.txt." << std::endl
         << "  -p <nthrs>     Run benchmarks with at least this thread count." << std::endl
         << "  -P <nthrs>     Run benchmarks with at most this thread count (overrides detected processor count)." << std::endl
-        << "  -Q             Run benchmarks with quadratically increasing thread count." << std::endl
+        << "  -Q             Run benchmarks with exponentially increasing thread count." << std::endl
         << "  -s <size>      Limit the _minimum_ test array size [byte]. Set to 0 for no limit." << std::endl
         << "  -S <size>      Limit the _maximum_ test array size [byte]. Set to 0 for no limit." << std::endl
         );
@@ -777,8 +777,8 @@ int main(int argc, char* argv[])
             break;
 
         case 'Q':
-            ERR("Running benchmarks with quadratically increasing thread counts.");
-            gopt_nthreads_quadratic = true;
+            ERR("Running benchmarks with exponentially increasing thread counts.");
+            gopt_nthreads_exponential = true;
             break;
 
         case 'p':
