@@ -665,6 +665,8 @@ void testfunc(const TestFunction* func)
     if (gopt_nthreads_max == 0)
         gopt_nthreads_max = g_physical_cpus + 2;
 
+    bool exp_have_physical = false;
+
     while (1)
     {
         // globally set test function and thread number
@@ -691,6 +693,20 @@ void testfunc(const TestFunction* func)
             nthreads = 2 * nthreads;
         else
             nthreads++;
+
+        // Prevent the next check from running the tests with g_physical_cpus
+        // twice if that is a power of two
+        if (gopt_nthreads_exponential && nthreads == g_physical_cpus)
+            exp_have_physical = true;
+
+        if (gopt_nthreads_exponential && nthreads > g_physical_cpus &&
+            !exp_have_physical) {
+            // Halve it because we want both with and without hyperthreading.
+            // The next iteration will then have nthreads == g_physical_cpus,
+            // and the one after that will be the last with gopt_nthreads_max.
+            nthreads = g_physical_cpus / 2;
+            exp_have_physical = true;
+        }
 
         if (nthreads > gopt_nthreads_max)
             nthreads = gopt_nthreads_max;
