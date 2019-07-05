@@ -2,7 +2,7 @@
 
 AC_PREREQ(2.69)
 
-AC_INIT(pmbw, 0.6.2)
+AC_INIT(pmbw, 0.6.3)
 AC_CONFIG_SRCDIR(pmbw.cc)
 AC_CONFIG_AUX_DIR(acscripts)
 
